@@ -9,9 +9,14 @@
     "core:window:allow-set-ignore-cursor-events",
     "core:window:allow-close",
     "process:allow-exit",
+    "process:allow-restart",
 
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    "global-shortcut:allow-unregister-all"
+    "global-shortcut:allow-unregister-all",
+
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install"
   ]
 }
