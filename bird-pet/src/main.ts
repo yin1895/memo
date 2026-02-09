@@ -21,6 +21,10 @@ import { MenuController, type MenuItem } from './core/menu';
 import { setupInteraction } from './core/interaction';
 import { UpdateController } from './core/updater';
 import { BubbleManager } from './core/bubble-manager';
+import { IdleCareScheduler } from './features/idle-care';
+import { HourlyChime } from './features/hourly-chime';
+import { PomodoroTimer } from './features/pomodoro';
+import { randomLine, CLICK_LINES } from './features/messages';
 
 async function main() {
   try {
@@ -48,6 +52,16 @@ async function main() {
     const bubble = new BubbleManager();
     await bubble.init();
 
+    // ─── 功能模块 ───
+    const idleCare = new IdleCareScheduler(bus, bubble);
+    const hourlyChime = new HourlyChime(bubble);
+    const pomodoro = new PomodoroTimer(bus, bubble);
+
+    // 点击宠物 → 随机台词
+    bus.on('pet:clicked', () => {
+      bubble.say({ text: randomLine(CLICK_LINES), priority: 'normal' });
+    });
+
     const updater = new UpdateController({
       overlay: document.getElementById('update-overlay') as HTMLDivElement,
       message: document.getElementById('update-message') as HTMLDivElement,
@@ -61,6 +75,12 @@ async function main() {
     });
 
     // ─── 菜单项配置 ───
+    /** 动态更新番茄钟菜单项文字 */
+    const updatePomodoroLabel = () => {
+      const el = document.querySelector('[data-id="pomodoro"]');
+      if (el) el.textContent = pomodoro.getStatusLabel();
+    };
+
     const menuItems: MenuItem[] = [
       {
         type: 'action', id: 'idle', label: '▶ 待机（idle）',
@@ -74,14 +94,19 @@ async function main() {
         type: 'action', id: 'tilt', label: '🙂 歪头（tilt）',
         handler: () => { animation.play('tilt'); menu.closeMenu(); },
       },
-      { type: 'separator', id: 'sep-1' },
+      { type: 'separator', id: 'sep-anim' },
       {
-        type: 'command', id: 'test-say', label: '💬 测试说话',
+        type: 'command', id: 'pomodoro', label: '🍅 番茄钟',
         handler: async () => {
           await menu.closeMenu();
-          bubble.sayText('嘿嘿！今天也要加油鸭！💪');
+          if (pomodoro.state === 'idle') {
+            pomodoro.start();
+          } else {
+            pomodoro.stop();
+          }
         },
       },
+      { type: 'separator', id: 'sep-tools' },
       {
         type: 'command', id: 'check-update', label: '🔄 检查更新',
         handler: async () => { await menu.closeMenu(); await updater.check(true); },
@@ -101,17 +126,25 @@ async function main() {
     ];
     menu.setItems(menuItems);
 
+    // 菜单打开时刷新番茄钟状态
+    bus.on('menu:opened', updatePomodoroLabel);
+
     // ─── 交互初始化 ───
     const cleanupInteraction = setupInteraction({
       canvas, app, animation, clickThrough, menu, bus,
     });
 
-    // ─── 启动动画 ───
+    // ─── 启动动画 & 功能模块 ───
     animation.start();
+    idleCare.start();
+    hourlyChime.start();
 
     // ─── 生命周期 ───
     window.addEventListener('beforeunload', async () => {
       cleanupInteraction();
+      idleCare.stop();
+      hourlyChime.stop();
+      pomodoro.stop();
       await bubble.dispose();
       bus.dispose();
       await unregisterAll();

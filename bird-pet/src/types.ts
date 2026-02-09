@@ -37,4 +37,8 @@ export type AppEvents = {
   'menu:closed': void;
   /** 点击穿透状态变更 */
   'clickthrough:changed': { enabled: boolean };
+  /** 番茄钟状态变更 */
+  'pomodoro:focus': void;
+  'pomodoro:break': void;
+  'pomodoro:stop': void;
 };
