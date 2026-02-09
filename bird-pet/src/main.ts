@@ -24,6 +24,7 @@ import { BubbleManager } from './core/bubble-manager';
 import { IdleCareScheduler } from './features/idle-care';
 import { HourlyChime } from './features/hourly-chime';
 import { PomodoroTimer } from './features/pomodoro';
+import { SystemMonitor } from './features/system-monitor';
 import { randomLine, CLICK_LINES } from './features/messages';
 
 async function main() {
@@ -56,6 +57,7 @@ async function main() {
     const idleCare = new IdleCareScheduler(bus, bubble);
     const hourlyChime = new HourlyChime(bubble);
     const pomodoro = new PomodoroTimer(bus, bubble);
+    const systemMonitor = new SystemMonitor(bubble);
 
     // 点击宠物 → 随机台词
     bus.on('pet:clicked', () => {
@@ -138,6 +140,7 @@ async function main() {
     animation.start();
     idleCare.start();
     hourlyChime.start();
+    systemMonitor.start();
 
     // ─── 生命周期 ───
     window.addEventListener('beforeunload', async () => {
@@ -145,6 +148,7 @@ async function main() {
       idleCare.stop();
       hourlyChime.stop();
       pomodoro.stop();
+      systemMonitor.stop();
       await bubble.dispose();
       bus.dispose();
       await unregisterAll();
