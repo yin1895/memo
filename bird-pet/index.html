@@ -7,8 +7,30 @@
   </head>
 
   <body>
-    <!-- main.ts 会把 canvas 和提示条塞进这里 -->
-    <div id="app"></div>
+    <div id="app">
+      <canvas id="pet"></canvas>
+      <div id="hint" class="hidden"></div>
+
+      <!-- 右键菜单（由 MenuController 动态渲染内容） -->
+      <div id="menu" class="menu-hidden"></div>
+
+      <!-- 更新对话框 -->
+      <div id="update-overlay" class="update-hidden">
+        <div id="update-dialog">
+          <div id="update-message"></div>
+          <div id="update-version"></div>
+          <div id="update-progress-wrap" class="update-hidden">
+            <div id="update-progress-bar"></div>
+            <div id="update-progress-text">0%</div>
+          </div>
+          <div id="update-buttons">
+            <button id="btn-update-now" class="update-btn primary">立即更新</button>
+            <button id="btn-update-later" class="update-btn">稍后提醒</button>
+            <button id="btn-update-skip" class="update-btn muted">不再提示</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
