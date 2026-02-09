@@ -20,6 +20,7 @@ import { ClickThroughManager } from './core/click-through';
 import { MenuController, type MenuItem } from './core/menu';
 import { setupInteraction } from './core/interaction';
 import { UpdateController } from './core/updater';
+import { BubbleManager } from './core/bubble-manager';
 
 async function main() {
   try {
@@ -42,6 +43,10 @@ async function main() {
       bus,
       clickThrough,
     );
+
+    // ─── 气泡系统 ───
+    const bubble = new BubbleManager();
+    await bubble.init();
 
     const updater = new UpdateController({
       overlay: document.getElementById('update-overlay') as HTMLDivElement,
@@ -70,6 +75,13 @@ async function main() {
         handler: () => { animation.play('tilt'); menu.closeMenu(); },
       },
       { type: 'separator', id: 'sep-1' },
+      {
+        type: 'command', id: 'test-say', label: '💬 测试说话',
+        handler: async () => {
+          await menu.closeMenu();
+          bubble.sayText('嘿嘿！今天也要加油鸭！💪');
+        },
+      },
       {
         type: 'command', id: 'check-update', label: '🔄 检查更新',
         handler: async () => { await menu.closeMenu(); await updater.check(true); },
@@ -100,6 +112,7 @@ async function main() {
     // ─── 生命周期 ───
     window.addEventListener('beforeunload', async () => {
       cleanupInteraction();
+      await bubble.dispose();
       bus.dispose();
       await unregisterAll();
     });
