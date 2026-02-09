@@ -1,0 +1,9 @@
+{
+  "frame_size": [150, 150],
+  "fps": 15,
+  "animations": {
+    "idle": { "sheet": "idle_sheet.png", "columns": 12, "rows": 10, "frames": 116, "loop": true },
+    "look": { "sheet": "look_sheet.png", "columns": 12, "rows": 10, "frames": 116, "loop": false },
+    "tilt": { "sheet": "tilt_sheet.png", "columns": 12, "rows": 10, "frames": 116, "loop": false }
+  }
+}
