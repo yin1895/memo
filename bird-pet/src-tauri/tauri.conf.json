@@ -33,7 +33,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": "msi",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -41,5 +41,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/yin1895/memo/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJDNTg2NTY4NkFFRkFFNEMKUldSTXJ1OXFhR1ZZTFBLSGp1UUZBR1lMZ0JscUhibDBIeW16WG9PZldQdXBYUWNKL0pvZEJMOUcK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

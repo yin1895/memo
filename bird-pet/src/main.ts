@@ -1,7 +1,8 @@
 import "./style.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
-import { exit } from "@tauri-apps/plugin-process";
+import { exit, relaunch } from "@tauri-apps/plugin-process";
+import { check, type DownloadEvent } from "@tauri-apps/plugin-updater";
 
 // 配置常量
 const CONFIG = {
@@ -33,8 +34,25 @@ app.innerHTML = `
     <div class="menu-item" data-act="look">👀 左右张望（look）</div>
     <div class="menu-item" data-act="tilt">🙂 歪头（tilt）</div>
     <div class="menu-sep"></div>
+    <div class="menu-item" data-cmd="check-update">🔄 检查更新</div>
     <div class="menu-item" data-cmd="toggle-through">🖱 切换点击穿透</div>
     <div class="menu-item" data-cmd="quit">⛔ 退出</div>
+  </div>
+
+  <div id="update-overlay" class="update-hidden">
+    <div id="update-dialog">
+      <div id="update-message"></div>
+      <div id="update-version"></div>
+      <div id="update-progress-wrap" class="update-hidden">
+        <div id="update-progress-bar"></div>
+        <div id="update-progress-text">0%</div>
+      </div>
+      <div id="update-buttons">
+        <button id="btn-update-now" class="update-btn primary">立即更新</button>
+        <button id="btn-update-later" class="update-btn">稍后提醒</button>
+        <button id="btn-update-skip" class="update-btn muted">不再提示</button>
+      </div>
+    </div>
   </div>
 `;
 
@@ -43,6 +61,17 @@ const hintEl = document.getElementById("hint") as HTMLDivElement;
 const canvas = document.getElementById("pet") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d", { alpha: true })!;
 const menu = document.getElementById("menu") as HTMLDivElement;
+
+// 更新对话框元素
+const updateOverlay = document.getElementById("update-overlay") as HTMLDivElement;
+const updateMessage = document.getElementById("update-message") as HTMLDivElement;
+const updateVersion = document.getElementById("update-version") as HTMLDivElement;
+const updateProgressWrap = document.getElementById("update-progress-wrap") as HTMLDivElement;
+const updateProgressBar = document.getElementById("update-progress-bar") as HTMLDivElement;
+const updateProgressText = document.getElementById("update-progress-text") as HTMLDivElement;
+const btnUpdateNow = document.getElementById("btn-update-now") as HTMLButtonElement;
+const btnUpdateLater = document.getElementById("btn-update-later") as HTMLButtonElement;
+const btnUpdateSkip = document.getElementById("btn-update-skip") as HTMLButtonElement;
 
 let menuOpen = false;
 let clickThroughBeforeMenu = false;
@@ -303,6 +332,12 @@ function setupInteraction() {
         return;
       }
 
+      if (cmd === "check-update") {
+        await closeMenu();
+        await checkForUpdate(true);
+        return;
+      }
+
       if (cmd === "toggle-through") {
         await closeMenu();         // 先关菜单再切穿透更自然
         // 短暂延迟，让菜单关闭动画完成
@@ -364,6 +399,136 @@ function setupInteraction() {
   };
 }
 
+// ========== 自动更新 ==========
+
+const IGNORED_VERSION_KEY = "bird-pet-ignored-version";
+
+/** 从 Release Notes body 中提取 [UPDATE_MESSAGE] 标记的自定义提示语 */
+function parseUpdateMessage(body?: string): string | null {
+  if (!body) return null;
+  const match = body.match(/\[UPDATE_MESSAGE\]\s*(.+)/);
+  return match ? match[1].trim() : null;
+}
+
+/** 显示更新对话框 */
+function showUpdateDialog(message: string, version: string) {
+  updateMessage.textContent = message;
+  updateVersion.textContent = `新版本：v${version}`;
+  updateProgressWrap.classList.add("update-hidden");
+  btnUpdateNow.style.display = "";
+  btnUpdateLater.style.display = "";
+  btnUpdateSkip.style.display = "";
+  btnUpdateNow.disabled = false;
+  btnUpdateNow.textContent = "立即更新";
+  updateOverlay.classList.remove("update-hidden");
+}
+
+function hideUpdateDialog() {
+  updateOverlay.classList.add("update-hidden");
+}
+
+/** 显示下载进度 */
+function showDownloadProgress(percent: number) {
+  updateProgressWrap.classList.remove("update-hidden");
+  updateProgressBar.style.width = `${percent}%`;
+  updateProgressText.textContent = `${Math.round(percent)}%`;
+}
+
+/** 检查更新（manual=true 时即使被忽略也检查，并弹提示） */
+async function checkForUpdate(manual: boolean) {
+  try {
+    const update = await check({ timeout: 10000 });
+    
+    if (!update) {
+      if (manual) showHint("已是最新版本 ✓", 2000);
+      return;
+    }
+
+    // 检查用户是否忽略了该版本
+    if (!manual) {
+      const ignoredVersion = localStorage.getItem(IGNORED_VERSION_KEY);
+      if (ignoredVersion === update.version) {
+        console.log(`版本 ${update.version} 已被用户忽略`);
+        return;
+      }
+    }
+
+    // 解析自定义提示语
+    const customMessage = parseUpdateMessage(update.body);
+    const displayMessage = customMessage || `发现新版本 🐦`;
+
+    // 展示更新对话框
+    showUpdateDialog(displayMessage, update.version);
+
+    // 绑定按钮事件（一次性）
+    const cleanup = () => {
+      btnUpdateNow.removeEventListener("click", onUpdateNow);
+      btnUpdateLater.removeEventListener("click", onLater);
+      btnUpdateSkip.removeEventListener("click", onSkip);
+    };
+
+    const onUpdateNow = async () => {
+      btnUpdateNow.disabled = true;
+      btnUpdateNow.textContent = "下载中...";
+      btnUpdateLater.style.display = "none";
+      btnUpdateSkip.style.display = "none";
+      
+      let totalBytes = 0;
+      let downloadedBytes = 0;
+
+      try {
+        await update.downloadAndInstall((event: DownloadEvent) => {
+          if (event.event === "Started") {
+            totalBytes = event.data.contentLength ?? 0;
+            downloadedBytes = 0;
+            showDownloadProgress(0);
+          } else if (event.event === "Progress") {
+            downloadedBytes += event.data.chunkLength;
+            const percent = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0;
+            showDownloadProgress(Math.min(percent, 100));
+          } else if (event.event === "Finished") {
+            showDownloadProgress(100);
+          }
+        });
+
+        // 安装完成，提示重启
+        updateProgressText.textContent = "安装完成！";
+        btnUpdateNow.textContent = "重启应用";
+        btnUpdateNow.disabled = false;
+        btnUpdateNow.onclick = async () => {
+          await relaunch();
+        };
+      } catch (err) {
+        console.error("更新下载失败:", err);
+        btnUpdateNow.textContent = "下载失败";
+        btnUpdateLater.style.display = "";
+        btnUpdateLater.textContent = "关闭";
+        showHint("更新下载失败", 2000);
+      }
+    };
+
+    const onLater = () => {
+      hideUpdateDialog();
+      cleanup();
+    };
+
+    const onSkip = () => {
+      localStorage.setItem(IGNORED_VERSION_KEY, update.version);
+      hideUpdateDialog();
+      cleanup();
+      showHint("已忽略此版本", 1500);
+    };
+
+    btnUpdateNow.addEventListener("click", onUpdateNow);
+    btnUpdateLater.addEventListener("click", onLater);
+    btnUpdateSkip.addEventListener("click", onSkip);
+
+  } catch (err) {
+    console.error("检查更新失败:", err);
+    if (manual) showHint("检查更新失败", 2000);
+  }
+}
+
 async function main() {
   try {
     manifest = await fetch("/manifest.json").then((r) => r.json());
@@ -388,6 +553,9 @@ async function main() {
       if (cleanup) cleanup();
       await unregisterAll();
     });
+
+    // 启动时检查更新（静默，不阻塞主流程）
+    setTimeout(() => checkForUpdate(false), 2000);
   } catch (e) {
     console.error("启动失败:", e);
     showHint("启动失败：打开控制台查看详情", 3000);
