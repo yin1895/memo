@@ -194,11 +194,8 @@ async function toggleClickThrough() {
     isToggling = false;
   }
 }
-function clamp(v: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, v));
-}
 
-async function openMenuAt(x: number, y: number) {
+async function openMenuAt() {
   try {
     // 如果当前是穿透，菜单无法点击，所以先临时关掉穿透
     clickThroughBeforeMenu = clickThrough;
@@ -218,21 +215,9 @@ async function openMenuAt(x: number, y: number) {
     // 等待浏览器重排以获取正确尺寸
     await new Promise(resolve => requestAnimationFrame(resolve));
 
-    const rect = app.getBoundingClientRect();
-    const mw = menu.offsetWidth || 0;
-    const mh = menu.offsetHeight || 0;
-
-    // 计算菜单位置，允许超出窗口（因为桌宠窗口小，菜单适当溢出是合理的）
-    // 优先显示在点击位置，如果右侧/下方空间不足则向左/上调整
-    let px = Math.min(x, rect.width - mw - CONFIG.MENU_PADDING);
-    let py = Math.min(y, rect.height - mh - CONFIG.MENU_PADDING);
-    
-    // 确保至少有一部分在窗口内
-    px = Math.max(CONFIG.MENU_PADDING, px);
-    py = Math.max(CONFIG.MENU_PADDING, py);
-
-    menu.style.left = `${px}px`;
-    menu.style.top = `${py}px`;
+    // 固定在窗口左上角，利用 CSS max-height + 滚动显示全部菜单项
+    menu.style.left = `${CONFIG.MENU_PADDING}px`;
+    menu.style.top = `${CONFIG.MENU_PADDING}px`;
   } catch (error) {
     console.error("打开菜单失败:", error);
     menuOpen = false;
@@ -299,8 +284,7 @@ function setupInteraction() {
     // 清除可能存在的拖动定时器，避免冲突
     clear();
 
-    const rect = app.getBoundingClientRect();
-    await openMenuAt(e.clientX - rect.left, e.clientY - rect.top);
+    await openMenuAt();
   });
 
   // 点击空白处关闭菜单
@@ -498,11 +482,12 @@ async function checkForUpdate(manual: boolean) {
 
         // 安装完成，提示重启
         updateProgressText.textContent = "安装完成！";
+        cleanup();
         btnUpdateNow.textContent = "重启应用";
         btnUpdateNow.disabled = false;
-        btnUpdateNow.onclick = async () => {
+        btnUpdateNow.addEventListener("click", async () => {
           await relaunch();
-        };
+        }, { once: true });
       } catch (err) {
         console.error("更新下载失败:", err);
         btnUpdateNow.textContent = "下载失败";
