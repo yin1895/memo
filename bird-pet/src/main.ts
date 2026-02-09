@@ -219,12 +219,17 @@ async function openMenuAt(x: number, y: number) {
     await new Promise(resolve => requestAnimationFrame(resolve));
 
     const rect = app.getBoundingClientRect();
-    const mw = Math.min(menu.offsetWidth || 0, rect.width - CONFIG.MENU_PADDING * 2);
-    const mh = Math.min(menu.offsetHeight || 0, rect.height - CONFIG.MENU_PADDING * 2);
+    const mw = menu.offsetWidth || 0;
+    const mh = menu.offsetHeight || 0;
 
-    // 把菜单限制在窗口内，不要溢出
-    const px = clamp(x, CONFIG.MENU_PADDING, Math.max(CONFIG.MENU_PADDING, rect.width - mw - CONFIG.MENU_PADDING));
-    const py = clamp(y, CONFIG.MENU_PADDING, Math.max(CONFIG.MENU_PADDING, rect.height - mh - CONFIG.MENU_PADDING));
+    // 计算菜单位置，允许超出窗口（因为桌宠窗口小，菜单适当溢出是合理的）
+    // 优先显示在点击位置，如果右侧/下方空间不足则向左/上调整
+    let px = Math.min(x, rect.width - mw - CONFIG.MENU_PADDING);
+    let py = Math.min(y, rect.height - mh - CONFIG.MENU_PADDING);
+    
+    // 确保至少有一部分在窗口内
+    px = Math.max(CONFIG.MENU_PADDING, px);
+    py = Math.max(CONFIG.MENU_PADDING, py);
 
     menu.style.left = `${px}px`;
     menu.style.top = `${py}px`;

@@ -9,7 +9,7 @@
     "core:window:allow-set-ignore-cursor-events",
     "core:window:allow-close",
     "process:allow-exit",
-    "process:allow-relaunch",
+    "process:allow-restart",
 
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",

@@ -19,12 +19,13 @@ html, body {
 #menu {
   position: absolute;
   min-width: 140px;
-  padding: 6px;
+  max-width: 180px;
+  padding: 4px;
   border-radius: 10px;
-  background: rgba(20, 20, 20, 0.88);
-  backdrop-filter: blur(8px);
+  background: rgba(20, 20, 20, 0.92);
+  backdrop-filter: blur(12px);
   color: #fff;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
   z-index: 9999;
   
   /* 添加过渡动画 */
@@ -44,10 +45,10 @@ html, body {
 
 .menu-item {
   font-size: 12px;
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
-  line-height: 1;
+  line-height: 1.2;
   user-select: none;
   white-space: nowrap;
   transition: background 0.1s ease, transform 0.1s ease, opacity 0.1s ease;
@@ -70,7 +71,7 @@ html, body {
 
 .menu-sep {
   height: 1px;
-  margin: 6px 6px;
+  margin: 4px 6px;
   background: rgba(255,255,255,0.12);
 }
 
