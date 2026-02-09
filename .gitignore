@@ -23,9 +23,7 @@ Desktop.ini
 *.swp
 *.swo
 *~
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
+.vscode/
 
 # 环境变量
 .env
