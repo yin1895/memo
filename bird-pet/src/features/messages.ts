@@ -1,9 +1,18 @@
 /**
  * 台词库 - 元气活泼风格 🐦
  *
- * 按场景分类的消息内容，方便后续扩展。
- * 添加新台词只需往对应数组 push 即可。
+ * v0.3.0: 从平面数组升级为场景化 DialogueEntry 系统。
+ * 保留旧的常量导出以兼容直接引用，
+ * 同时提供 DIALOGUE_ENTRIES 供 DialogueEngine 使用。
+ *
+ * 添加新台词：往对应场景的 lines 数组中追加即可。
+ * 添加新场景：新增一个 DialogueEntry 对象。
  */
+import type { DialogueEntry } from './dialogue-engine';
+
+// ────────────────────────────────────────
+// 兼容旧模块的直接导出（保留引用不被破坏）
+// ────────────────────────────────────────
 
 /** 点击宠物时的反应台词 */
 export const CLICK_LINES = [
@@ -19,6 +28,10 @@ export const CLICK_LINES = [
   '啾～需要我帮忙吗？',
   '我在守护你的工作哦！🛡️',
   '突然被戳…好害羞！',
+  '嘿！别闹～我在思考鸟生大事呢！',
+  '戳戳戳…你是不是无聊了？陪你玩！',
+  '又来啦？今天想听什么呀？',
+  '你的指尖好温柔～再来一次嘛！',
 ];
 
 /** 闲置关怀：久坐提醒 */
@@ -31,6 +44,9 @@ export const IDLE_CARE_LINES = [
   '深呼吸三次试试？会感觉好很多哦～🌬️',
   '记得放松一下肩膀！别太紧绷了～',
   '休息一下下，回来效率更高哦！',
+  '转转脖子、甩甩手！身体会感谢你的～',
+  '窗外的风景很美哦，要不要去看看？🌿',
+  '久坐对腰不好！站起来扭扭腰～',
 ];
 
 /** 整点报时 */
@@ -67,6 +83,7 @@ export const POMODORO_START_LINES = [
   '开始专注 25 分钟！我会安静陪着你～',
   '番茄时间开始！💪 你可以的！',
   '集中注意力！我帮你看着时间～⏱️',
+  '冲鸭！25 分钟后见！我先安静～🤫',
 ];
 
 /** 番茄钟：专注阶段结束 → 该休息了 */
@@ -75,6 +92,7 @@ export const POMODORO_BREAK_LINES = [
   '太棒了！又完成了一个番茄！🎉 起来走走～',
   '专注结束！站起来活动活动！💃',
   '好厉害！休息一下再继续吧！☕',
+  '完美的 25 分钟！你太强了！🏆',
 ];
 
 /** 番茄钟：休息结束 */
@@ -82,6 +100,7 @@ export const POMODORO_RESUME_LINES = [
   '休息结束！准备好继续了吗？🔥',
   '充电完毕！让我们再冲一波！⚡',
   '5 分钟到啦！回来继续加油！💪',
+  '休息够了吧？再来一个番茄！🍅',
 ];
 
 /** 随机正能量（低频触发） */
@@ -91,9 +110,106 @@ export const AFFIRMATION_LINES = [
   '记住：你值得所有好的事情！✨',
   '不管结果如何，努力的你最帅了！',
   '今天也辛苦了！我一直在你旁边哦～',
+  '你有没有被夸过？你真的很厉害！',
+  '世界上只有一个你，独一无二的你！🌟',
 ];
 
-/** 从数组中随机取一条 */
+// ────────────────────────────────────────
+// 行为感知台词（新增 v0.3.0）
+// ────────────────────────────────────────
+
+/** 编码场景 */
+export const CONTEXT_CODING_LINES = [
+  '又在写代码啦？记得多喝水哦！💧',
+  'Bug 终结者上线！加油鸭！🦆',
+  '代码写得好，头发掉得少～注意休息！',
+  '今天的代码一定很优雅！我帮你看着～',
+  '编程使你快乐！（但记得护眼）👀',
+  '一行代码一份快乐～你今天快乐了吗？',
+  '程序员最帅了！（偷偷竖大拇指）👍',
+  '我虽然看不懂代码…但你写的一定很厉害！',
+  '编译通过了吗？不管怎样我都支持你！💪',
+  '写代码的你，专注的样子真帅！✨',
+];
+
+/** 浏览器场景 */
+export const CONTEXT_BROWSING_LINES = [
+  '冲浪愉快～别忘了收藏好东西！📌',
+  '网上冲浪也要注意时间哦～',
+  '看到有趣的东西了吗？分享给我听听嘛！',
+  '浏览器打开了好多标签吧…要不要整理一下？',
+  '互联网的世界真大呀！但别忘了现实世界～',
+  '小心别掉进信息黑洞啦！⚠️',
+  '找到想要的了吗？我在这里陪你～',
+  '网页加载中…我们来比赛谁先眨眼！👀',
+];
+
+/** 游戏场景 */
+export const CONTEXT_GAMING_LINES = [
+  '打游戏要开心哦！别太上头了～🎮',
+  '赢了吗赢了吗？给我比个耶！✌️',
+  '游戏时间！我来当你的啦啦队！📣',
+  '大佬带带我！（虽然我是只鸟）',
+  'GG！再来一把！...等等先喝口水！',
+  '你打游戏的样子好认真！我在旁边给你加油！',
+  '游戏归游戏，记得按时吃饭哦～🍜',
+  '输了也没关系！开心最重要啦～',
+];
+
+/** 音乐场景 */
+export const CONTEXT_MUSIC_LINES = [
+  '好听吗好听吗？我也想听！🎵',
+  '♪ 一起摇摆～啾啾啾～',
+  '听音乐的时光最惬意了～🎶',
+  '你的品味一定超棒！能推荐给我吗？',
+  '我最喜欢听你放的歌了！（跟着节奏晃）',
+  '音乐是心灵的良药～享受吧！🎧',
+  '这首歌好好听！再放一首嘛～',
+  '♫ 啾啾～我也来唱一段！（走音了）',
+];
+
+/** 会议场景 */
+export const CONTEXT_MEETING_LINES = [
+  '开会加油！我在旁边给你打气！💪',
+  '会议中～我先安静一会儿…🤫',
+  '认真开会的你最帅了！我不打扰～',
+  '开完会记得喝口水、伸展一下哦！',
+  '会议好长啊…你辛苦了！再坚持一下～',
+  '我帮你默默加油！你说得一定很棒！✨',
+];
+
+/** 闲置/桌面场景 */
+export const CONTEXT_IDLE_LINES = [
+  '发呆中…一起发呆吧～😶',
+  '好安静啊～在思考什么呢？',
+  '无所事事的时光也很珍贵哦～🌸',
+  '要不要来玩玩我？戳一下试试！',
+  '闲下来了？那来陪我聊聊天吧！',
+  '偶尔放空一下也挺好的～享受当下！',
+];
+
+// ────────────────────────────────────────
+// 统一的 DialogueEntry 集合（供 DialogueEngine 使用）
+// ────────────────────────────────────────
+
+export const DIALOGUE_ENTRIES: DialogueEntry[] = [
+  { scene: 'click',           lines: CLICK_LINES },
+  { scene: 'idle_care',       lines: IDLE_CARE_LINES },
+  { scene: 'affirmation',     lines: AFFIRMATION_LINES },
+  { scene: 'pomodoro_start',  lines: POMODORO_START_LINES },
+  { scene: 'pomodoro_break',  lines: POMODORO_BREAK_LINES },
+  { scene: 'pomodoro_resume', lines: POMODORO_RESUME_LINES },
+
+  // 行为感知台词
+  { scene: 'context_coding',   lines: CONTEXT_CODING_LINES },
+  { scene: 'context_browsing', lines: CONTEXT_BROWSING_LINES },
+  { scene: 'context_gaming',   lines: CONTEXT_GAMING_LINES },
+  { scene: 'context_music',    lines: CONTEXT_MUSIC_LINES },
+  { scene: 'context_meeting',  lines: CONTEXT_MEETING_LINES },
+  { scene: 'context_idle',     lines: CONTEXT_IDLE_LINES },
+];
+
+/** 从数组中随机取一条（保留兼容） */
 export function randomLine(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)];
 }

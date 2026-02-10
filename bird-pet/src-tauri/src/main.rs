@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use active_win_pos_rs::get_active_window;
 use serde::Serialize;
 use std::sync::Mutex;
 use sysinfo::System;
@@ -48,6 +49,26 @@ fn get_system_stats(monitor: State<'_, SystemMonitor>) -> SystemStats {
     }
 }
 
+/// 当前活跃窗口信息
+#[derive(Debug, Serialize)]
+struct ActiveWindowInfo {
+    /// 应用/进程名称
+    app_name: String,
+    /// 窗口标题
+    title: String,
+}
+
+#[tauri::command]
+fn get_active_window_info() -> Option<ActiveWindowInfo> {
+    match get_active_window() {
+        Ok(win) => Some(ActiveWindowInfo {
+            app_name: win.app_name,
+            title: win.title,
+        }),
+        Err(_) => None,
+    }
+}
+
 fn main() {
     // 初始化系统监控（做一次基线刷新以便后续 CPU 读数准确）
     let mut sys = System::new();
@@ -58,10 +79,11 @@ fn main() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .manage(SystemMonitor {
             system: Mutex::new(sys),
         })
-        .invoke_handler(tauri::generate_handler![get_system_stats])
+        .invoke_handler(tauri::generate_handler![get_system_stats, get_active_window_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

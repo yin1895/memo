@@ -21,11 +21,15 @@ import { MenuController, type MenuItem } from './core/menu';
 import { setupInteraction } from './core/interaction';
 import { UpdateController } from './core/updater';
 import { BubbleManager } from './core/bubble-manager';
+import { StorageService } from './core/storage';
+import { EffectsManager } from './core/effects';
 import { IdleCareScheduler } from './features/idle-care';
 import { HourlyChime } from './features/hourly-chime';
 import { PomodoroTimer } from './features/pomodoro';
 import { SystemMonitor } from './features/system-monitor';
-import { randomLine, CLICK_LINES } from './features/messages';
+import { ContextAwareness } from './features/context-awareness';
+import { DialogueEngine } from './features/dialogue-engine';
+import { DIALOGUE_ENTRIES } from './features/messages';
 
 async function main() {
   try {
@@ -53,15 +57,39 @@ async function main() {
     const bubble = new BubbleManager();
     await bubble.init();
 
+    // ─── v0.3.0: 新增核心模块 ───
+    const storage = new StorageService();
+    const dialogue = new DialogueEngine(DIALOGUE_ENTRIES);
+    const effects = new EffectsManager();
+
     // ─── 功能模块 ───
     const idleCare = new IdleCareScheduler(bus, bubble);
     const hourlyChime = new HourlyChime(bubble);
-    const pomodoro = new PomodoroTimer(bus, bubble);
+    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime);
     const systemMonitor = new SystemMonitor(bubble);
+    const contextAwareness = new ContextAwareness(bus, bubble, dialogue);
 
-    // 点击宠物 → 随机台词
+    // 点击宠物 → 对话引擎选取台词 + 粒子特效
     bus.on('pet:clicked', () => {
-      bubble.say({ text: randomLine(CLICK_LINES), priority: 'normal' });
+      bubble.say({ text: dialogue.getLine('click'), priority: 'normal' });
+      // 随机播放心形或星星特效
+      if (Math.random() > 0.5) {
+        effects.playHearts();
+      } else {
+        effects.playSparks();
+      }
+      // 记录交互
+      storage.incrementInteraction();
+    });
+
+    // 行为上下文变更 → 播放对应特效
+    bus.on('context:changed', ({ to }) => {
+      effects.playForContext(to);
+    });
+
+    // 番茄钟开始 → 弹跳特效
+    bus.on('pomodoro:focus', () => {
+      effects.playBounce();
     });
 
     const updater = new UpdateController({
@@ -141,6 +169,10 @@ async function main() {
     idleCare.start();
     hourlyChime.start();
     systemMonitor.start();
+    contextAwareness.start();
+
+    // 记录今日活跃
+    storage.recordActivity();
 
     // ─── 生命周期 ───
     window.addEventListener('beforeunload', async () => {
@@ -149,6 +181,8 @@ async function main() {
       hourlyChime.stop();
       pomodoro.stop();
       systemMonitor.stop();
+      contextAwareness.destroy();
+      await storage.save();
       await bubble.dispose();
       bus.dispose();
       await unregisterAll();

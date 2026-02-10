@@ -16,6 +16,10 @@
 - **独立气泡系统**：子窗口显示对话（打字机效果 + 渐隐动画）
 - **价值给予功能**：点击台词、久坐提醒、整点报时、番茄钟、系统监控
 - **视觉反馈**：穿透模式下半透明+发光效果
+- **🆕 行为感知**：检测当前活跃窗口，识别编码/浏览/游戏/音乐/会议等场景并做出对应反应
+- **🆕 对话引擎**：场景化条件匹配的台词系统（120+ 条台词），替代简单随机数组
+- **🆕 粒子特效**：CSS 动画粒子层（心形飘升、星星闪烁、音符飘动、Zzz 等）
+- **🆕 持久化存储**：基于 tauri-plugin-store 的本地状态持久化
 
 ## 🏗️ 技术栈
 
@@ -33,7 +37,9 @@
   - `tauri-plugin-process` - 进程管理（退出功能）
   - `tauri-plugin-opener` - 系统打开器
   - `tauri-plugin-updater` - 自动更新
+  - `tauri-plugin-store` - 持久化存储（v0.3.0）
 - **系统监控**：`sysinfo` - CPU/内存指标
+- **窗口检测**：`active-win-pos-rs` - 活跃窗口识别（v0.3.0）
 
 ## 📦 项目结构
 
@@ -55,9 +61,13 @@ bird-pet/
 │   │   ├── menu.ts               # 右键菜单（可扩展）
 │   │   ├── updater.ts            # 自动更新
 │   │   ├── bubble-manager.ts     # 气泡子窗口管理
-│   │   └── message-queue.ts      # 消息队列
+│   │   ├── message-queue.ts      # 消息队列
+│   │   ├── storage.ts            # 持久化存储服务（v0.3.0）
+│   │   └── effects.ts            # CSS 粒子特效管理（v0.3.0）
 │   ├── features/                 # 价值功能模块
-│   │   ├── messages.ts           # 台词库
+│   │   ├── messages.ts           # 台词库（场景化 v0.3.0）
+│   │   ├── dialogue-engine.ts    # 对话引擎（v0.3.0）
+│   │   ├── context-awareness.ts  # 行为感知（v0.3.0）
 │   │   ├── idle-care.ts          # 久坐关怀
 │   │   ├── hourly-chime.ts       # 整点报时
 │   │   ├── pomodoro.ts           # 番茄钟
@@ -135,9 +145,64 @@ bird-pet/
 ### 价值功能调度
 - **点击台词**：点击宠物触发随机“元气”台词
 - **久坐提醒**：30 分钟未活动自动提醒
-- **整点报时**：整点自动播报
+- **整点报时**：整点自动播报（番茄钟专注时自动暂停）
 - **番茄钟**：25 分钟专注 + 5 分钟休息循环
 - **系统监控**：CPU/内存过高时低优先级提示
+
+## 🧠 行为感知系统（v0.3.0）
+
+### 工作原理
+1. Rust 后端通过 `active-win-pos-rs` 每 15 秒获取当前前台窗口的应用名和标题
+2. 前端 `ContextAwareness` 模块基于正则规则分类用户行为
+3. 上下文变更时通过 EventBus 广播 `context:changed` 事件
+4. 对话引擎和粒子特效系统响应事件，提供情感反馈
+
+### 识别规则
+
+| 场景 | 匹配关键词 |
+|------|-----------|
+| 编码 | VS Code, IntelliJ, WebStorm, Sublime, Vim, Neovim, Cursor 等 |
+| 浏览 | Chrome, Firefox, Edge, Safari, Brave, Opera, Arc 等 |
+| 游戏 | Steam, Epic, Riot, 原神, Valorant, Minecraft 等 |
+| 音乐 | Spotify, 网易云音乐, QQ音乐, foobar2000, Apple Music 等 |
+| 会议 | Zoom, Teams, 腾讯会议, 飞书, 钉钉, Slack, Discord 等 |
+| 闲置 | 桌面, Explorer 等 |
+
+### 参数配置
+- 轮询间隔：15 秒
+- 台词冷却：5 分钟（防止频繁切换窗口导致气泡轰炸）
+- 优先级：会议 > 游戏 > 音乐 > 编码 > 浏览 > 闲置
+
+## 💬 对话引擎设计（v0.3.0）
+
+### DialogueEntry 结构
+```typescript
+interface DialogueEntry {
+  scene: DialogueScene;        // 场景标识（click, context_coding, ...）
+  lines: string[];             // 台词列表
+  conditions?: {               // 可选条件
+    hourRange?: [number, number]; // 小时范围
+    appContext?: AppContext;       // 行为上下文
+  };
+  priority?: 'high' | 'normal' | 'low';
+}
+```
+
+### 匹配逻辑
+1. 各模块传入场景类型 + 当前上下文
+2. 引擎从 `DIALOGUE_ENTRIES` 中筛选匹配条目
+3. 在匹配结果中随机选取一条台词
+4. 无匹配时回退到同场景无条件的通用台词池
+
+## ✨ 粒子特效系统（v0.3.0）
+
+| 特效 | 触发条件 | 视觉表现 |
+|------|---------|---------|
+| ❤️ 心形飘升 | 点击宠物 | 心形 emoji 从宠物处飘升并渐隐 |
+| ✨ 星星闪烁 | 点击宠物 / 编码 / 游戏场景切换 | 星星旋转缩放闪烁 |
+| 🎵 音符飘动 | 音乐场景切换 | 音符沿正弦路径上飘 |
+| 💤 Zzz 飘升 | 久坐提醒 | "Z" 字母向右上方飘动放大 |
+| 🔥 弹跳 | 番茄钟专注开始 | 火焰/闪电 emoji 弹跳 |
 
 ## 🔧 配置常量
 
@@ -173,7 +238,8 @@ const CONFIG = {
     "process:allow-restart",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    "global-shortcut:allow-unregister-all"
+    "global-shortcut:allow-unregister-all",
+    "store:default"
   ]
 }
 ```
@@ -210,9 +276,15 @@ npm run tauri build
 4. 重启应用即可
 
 ### 添加新台词或价值功能
-1. 在 `src/features/messages.ts` 对应数组中追加台词
-2. 若新增功能模块，创建 `features/xxx.ts` 并在 `main.ts` 中初始化
-3. 通过 `EventBus` 订阅/触发事件减少模块间耦合
+1. 在 `src/features/messages.ts` 对应 `DialogueEntry` 的 `lines` 数组中追加台词
+2. 若新增场景，创建 `DialogueEntry` 对象并加入 `DIALOGUE_ENTRIES` 数组
+3. 若新增功能模块，创建 `features/xxx.ts` 并在 `main.ts` 中初始化
+4. 通过 `EventBus` 订阅/触发事件减少模块间耦合
+
+### 添加新行为感知规则
+1. 在 `src/features/context-awareness.ts` 的 `APP_RULES` 中添加新的正则匹配
+2. 在 `src/features/messages.ts` 中添加对应 `context_*` 场景的台词
+3. 重启应用即可生效（无需修改引擎代码）
 
 ## 🎯 核心代码亮点
 
@@ -270,7 +342,15 @@ bubble.say({ text: '嘿嘿！今天也要加油鸭！💪', priority: 'normal' }
 
 ## 📝 开发日志
 
-### 2026-02-10
+### 2026-02-10 (v0.3.0)
+- 🧠 **行为感知**：接入 `active-win-pos-rs`，15 秒轮询检测活跃窗口，识别编码/浏览/游戏/音乐/会议/闲置 6 种场景
+- 💬 **对话引擎**：从简单数组升级为场景化条件匹配系统 `DialogueEngine`，支持上下文/时间/行为条件筛选
+- 📝 **台词扩充**：从约 60 条扩充至 120+ 条，覆盖 6 种行为感知场景
+- ✨ **粒子特效**：CSS 动画粒子层（❤️ 心形飘升、✨ 星星闪烁、🎵 音符飘动、💤 Zzz 睡眠、🔥 弹跳）
+- 💾 **持久化存储**：接入 `tauri-plugin-store`，交互计数与偏好设置跨重启保留
+- 🐛 **修复**：番茄钟专注时暂停整点报时，避免干扰
+
+### 2026-02-10 (v0.2.0)
 - ✨ 模块化重构（核心逻辑拆分为 core/ 与 features/）
 - 💬 新增独立气泡子窗口（打字机效果 + 队列）
 - 🧠 新增价值功能：点击台词、久坐提醒、整点报时、番茄钟

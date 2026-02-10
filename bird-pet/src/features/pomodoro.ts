@@ -8,6 +8,7 @@
 import type { AppEvents } from '../types';
 import type { EventBus } from '../events';
 import type { BubbleManager } from '../core/bubble-manager';
+import type { HourlyChime } from './hourly-chime';
 import {
   randomLine,
   POMODORO_START_LINES,
@@ -25,6 +26,7 @@ export type PomodoroState = 'idle' | 'focus' | 'break';
 export class PomodoroTimer {
   private _bus: EventBus<AppEvents>;
   private bubble: BubbleManager;
+  private hourlyChime: HourlyChime;
 
   private _state: PomodoroState = 'idle';
   private timer: number | null = null;
@@ -49,9 +51,10 @@ export class PomodoroTimer {
     return Math.max(0, duration - elapsed);
   }
 
-  constructor(bus: EventBus<AppEvents>, bubble: BubbleManager) {
+  constructor(bus: EventBus<AppEvents>, bubble: BubbleManager, hourlyChime: HourlyChime) {
     this._bus = bus;
     this.bubble = bubble;
+    this.hourlyChime = hourlyChime;
   }
 
   /** 开始/重启番茄钟 */
@@ -60,6 +63,7 @@ export class PomodoroTimer {
     this._state = 'focus';
     this.startedAt = Date.now();
     this._bus.emit('pomodoro:focus');
+    this.hourlyChime.setEnabled(false); // 专注时暂停整点报时
     this.bubble.say({
       text: randomLine(POMODORO_START_LINES),
       priority: 'high',
@@ -73,6 +77,7 @@ export class PomodoroTimer {
     this.clearTimer();
     this._state = 'idle';
     this._bus.emit('pomodoro:stop');
+    this.hourlyChime.setEnabled(true); // 恢复整点报时
     this.bubble.sayText('番茄钟已停止！今天完成了 ' + this.completedCount + ' 个 🍅');
   }
 
@@ -94,6 +99,7 @@ export class PomodoroTimer {
     this._state = 'break';
     this.startedAt = Date.now();
     this._bus.emit('pomodoro:break');
+    this.hourlyChime.setEnabled(true); // 休息时恢复整点报时
     this.bubble.say({
       text: randomLine(POMODORO_BREAK_LINES),
       priority: 'high',
@@ -106,6 +112,7 @@ export class PomodoroTimer {
     this._state = 'focus';
     this.startedAt = Date.now();
     this._bus.emit('pomodoro:focus');
+    this.hourlyChime.setEnabled(false); // 专注时暂停整点报时
     this.bubble.say({
       text: randomLine(POMODORO_RESUME_LINES),
       priority: 'high',
