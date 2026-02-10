@@ -70,6 +70,9 @@ export class MemorySystem {
     // 执行日终汇总（检查是否跨天）
     this.summarizeDay();
 
+    // 发送启动时洞察
+    this.emitStartupInsights();
+
     // 注册事件监听
     this.unsubscribers.push(
       this.bus.on('pet:clicked', () => this.recordEvent({ type: 'interaction', timestamp: Date.now() })),
@@ -203,6 +206,43 @@ export class MemorySystem {
   }
 
   // ─── 内部方法 ───
+
+  /**
+   * 应用启动时发送洞察事件
+   * 延迟 5 秒执行，避免与启动动画冲突
+   */
+  private emitStartupInsights(): void {
+    window.setTimeout(() => {
+      const streak = this.getStreak();
+      const sleepPattern = this.getSleepPattern();
+
+      // 连续天数洞察
+      if (streak >= 3) {
+        this.bus.emit('memory:insight', {
+          type: 'streak',
+          message: `连续使用 ${streak} 天`,
+        });
+        return; // 每次启动只发一条洞察，避免气泡轰炸
+      }
+
+      // 作息模式洞察
+      if (sleepPattern === 'night_owl') {
+        this.bus.emit('memory:insight', {
+          type: 'sleep',
+          message: '最近经常熬夜',
+        });
+        return;
+      }
+
+      if (sleepPattern === 'early_bird') {
+        this.bus.emit('memory:insight', {
+          type: 'sleep',
+          message: '最近起得很早',
+        });
+        return;
+      }
+    }, 5000);
+  }
 
   /** 记录一条事件 */
   private recordEvent(event: MemoryEvent): void {
