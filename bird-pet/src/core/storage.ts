@@ -17,6 +17,10 @@ export const STORE_KEYS = {
   LAST_ACTIVE_DATE: 'lastActiveDate',
   /** 功能开关偏好 */
   PREFERENCES: 'preferences',
+  /** 记忆事件原始日志（v0.4.0） */
+  MEMORY_EVENTS: 'memoryEvents',
+  /** 用户画像（v0.4.0） */
+  USER_PROFILE: 'userProfile',
 } as const;
 
 /** 用户偏好结构 */
