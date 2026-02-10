@@ -41,4 +41,6 @@ export type AppEvents = {
   'pomodoro:focus': void;
   'pomodoro:break': void;
   'pomodoro:stop': void;
+  /** 行为上下文变更（v0.3.0） */
+  'context:changed': { from: string; to: string };
 };
