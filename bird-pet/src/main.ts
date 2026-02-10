@@ -63,9 +63,9 @@ async function main() {
     const effects = new EffectsManager();
 
     // ─── 功能模块 ───
-    const idleCare = new IdleCareScheduler(bus, bubble);
-    const hourlyChime = new HourlyChime(bubble);
-    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime);
+    const idleCare = new IdleCareScheduler(bus, bubble, dialogue);
+    const hourlyChime = new HourlyChime(bubble, dialogue);
+    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue);
     const systemMonitor = new SystemMonitor(bubble);
     const contextAwareness = new ContextAwareness(bus, bubble, dialogue);
 
