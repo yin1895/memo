@@ -8,7 +8,7 @@
 import type { AppEvents } from '../types';
 import type { EventBus } from '../events';
 import type { BubbleManager } from '../core/bubble-manager';
-import { randomLine, IDLE_CARE_LINES, AFFIRMATION_LINES } from './messages';
+import type { DialogueEngine } from './dialogue-engine';
 
 /** 久坐提醒间隔（毫秒）= 30 分钟 */
 const SEDENTARY_INTERVAL = 30 * 60 * 1000;
@@ -20,14 +20,16 @@ const AFFIRMATION_PROBABILITY = 0.6;
 export class IdleCareScheduler {
   private bus: EventBus<AppEvents>;
   private bubble: BubbleManager;
+  private dialogue: DialogueEngine;
 
   private sedentaryTimer: number | null = null;
   private affirmationTimer: number | null = null;
   private lastActivity = Date.now();
 
-  constructor(bus: EventBus<AppEvents>, bubble: BubbleManager) {
+  constructor(bus: EventBus<AppEvents>, bubble: BubbleManager, dialogue: DialogueEngine) {
     this.bus = bus;
     this.bubble = bubble;
+    this.dialogue = dialogue;
   }
 
   /** 启动调度 */
@@ -42,7 +44,7 @@ export class IdleCareScheduler {
       const elapsed = Date.now() - this.lastActivity;
       if (elapsed >= SEDENTARY_INTERVAL) {
         this.bubble.say({
-          text: randomLine(IDLE_CARE_LINES),
+          text: this.dialogue.getLine('idle_care'),
           priority: 'normal',
           duration: 5000,
         });
@@ -55,7 +57,7 @@ export class IdleCareScheduler {
     this.affirmationTimer = window.setInterval(() => {
       if (Math.random() < AFFIRMATION_PROBABILITY) {
         this.bubble.say({
-          text: randomLine(AFFIRMATION_LINES),
+          text: this.dialogue.getLine('affirmation'),
           priority: 'low',
           duration: 5000,
         });

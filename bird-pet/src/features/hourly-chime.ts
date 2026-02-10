@@ -5,15 +5,17 @@
  * 使用精确的整点对齐算法，避免漂移。
  */
 import type { BubbleManager } from '../core/bubble-manager';
-import { HOURLY_LINES } from './messages';
+import type { DialogueEngine } from './dialogue-engine';
 
 export class HourlyChime {
   private bubble: BubbleManager;
+  private dialogue: DialogueEngine;
   private timer: number | null = null;
   private enabled = true;
 
-  constructor(bubble: BubbleManager) {
+  constructor(bubble: BubbleManager, dialogue: DialogueEngine) {
     this.bubble = bubble;
+    this.dialogue = dialogue;
   }
 
   /** 启动整点报时 */
@@ -51,7 +53,7 @@ export class HourlyChime {
 
   private chime(): void {
     const hour = new Date().getHours();
-    const text = HOURLY_LINES[hour] ?? `现在是 ${hour} 点！`;
+    const text = this.dialogue.getLine('hourly', { hour });
     this.bubble.say({
       text,
       priority: 'normal',

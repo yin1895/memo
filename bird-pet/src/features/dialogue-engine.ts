@@ -65,18 +65,25 @@ export interface DialogueContext {
   appContext: AppContext;
 }
 
+/** 最近台词去重队列容量 */
+const RECENT_LINES_CAPACITY = 10;
+
 /**
  * 对话引擎主类
+ *
+ * v0.4.0: 新增台词去重机制，最近 10 条不重复。
  */
 export class DialogueEngine {
   private entries: DialogueEntry[];
+  /** 最近使用的台词队列（FIFO），用于去重 */
+  private recentLines: string[] = [];
 
   constructor(entries: DialogueEntry[]) {
     this.entries = entries;
   }
 
   /**
-   * 获取指定场景下的一条台词
+   * 获取指定场景下的一条台词（带去重）
    *
    * @param scene - 对话场景
    * @param ctx   - 当前运行时上下文（可选，不传则只按场景匹配）
@@ -100,11 +107,11 @@ export class DialogueEngine {
 
     // 汇总所有台词
     const allLines = pool.flatMap((e) => e.lines);
-    return allLines[Math.floor(Math.random() * allLines.length)];
+    return this.pickWithDedup(allLines);
   }
 
   /**
-   * 根据当前行为上下文获取对应的 context_* 场景台词
+   * 根据当前行为上下文获取对应的 context_* 场景台词（带去重）
    */
   getContextLine(appContext: AppContext): string | null {
     const sceneMap: Record<string, DialogueScene> = {
@@ -122,7 +129,7 @@ export class DialogueEngine {
     if (entries.length === 0) return null;
 
     const allLines = entries.flatMap((e) => e.lines);
-    return allLines[Math.floor(Math.random() * allLines.length)];
+    return this.pickWithDedup(allLines);
   }
 
   /** 检查条件是否满足 */
@@ -143,5 +150,25 @@ export class DialogueEngine {
       if (cond.appContext !== ctx.appContext) return false;
     }
     return true;
+  }
+
+  /**
+   * 从候选台词中去重选取
+   *
+   * 优先排除最近使用过的台词；若全部用过则回退到完整池。
+   */
+  private pickWithDedup(allLines: string[]): string {
+    // 过滤掉最近说过的台词
+    const fresh = allLines.filter((l) => !this.recentLines.includes(l));
+    // 若过滤后池非空则取 fresh，否则回退到全量（避免台词 <= 10 条时死循环）
+    const pickPool = fresh.length > 0 ? fresh : allLines;
+    const line = pickPool[Math.floor(Math.random() * pickPool.length)];
+
+    // 推入去重队列
+    this.recentLines.push(line);
+    if (this.recentLines.length > RECENT_LINES_CAPACITY) {
+      this.recentLines.shift();
+    }
+    return line;
   }
 }
