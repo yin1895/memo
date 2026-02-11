@@ -6,20 +6,27 @@
  */
 import type { BubbleManager } from '../core/bubble-manager';
 import type { DialogueEngine } from './dialogue-engine';
+import type { StorageService } from '../core/storage';
 
 export class HourlyChime {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
+  private storage: StorageService | null;
   private timer: number | null = null;
   private enabled = true;
 
-  constructor(bubble: BubbleManager, dialogue: DialogueEngine) {
+  constructor(bubble: BubbleManager, dialogue: DialogueEngine, storage?: StorageService) {
     this.bubble = bubble;
     this.dialogue = dialogue;
+    this.storage = storage ?? null;
   }
 
   /** 启动整点报时 */
-  start(): void {
+  async start(): Promise<void> {
+    if (this.storage) {
+      const prefs = await this.storage.getPreferences();
+      if (!prefs.hourlyChimeEnabled) return;
+    }
     this.scheduleNext();
   }
 

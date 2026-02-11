@@ -21,6 +21,8 @@ export const STORE_KEYS = {
   MEMORY_EVENTS: 'memoryEvents',
   /** 用户画像（v0.4.0） */
   USER_PROFILE: 'userProfile',
+  /** 特殊日期当日触发记录（v0.5.0） */
+  SPECIAL_DATE_TRIGGERED: 'specialDateTriggered',
 } as const;
 
 /** 用户偏好结构 */

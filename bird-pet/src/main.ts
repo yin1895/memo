@@ -31,6 +31,8 @@ import { SystemMonitor } from './features/system-monitor';
 import { ContextAwareness } from './features/context-awareness';
 import { DialogueEngine } from './features/dialogue-engine';
 import { DIALOGUE_ENTRIES } from './features/messages';
+import { SpecialDateManager } from './features/special-dates';
+import { GreetingManager } from './features/greeting';
 
 async function main() {
   try {
@@ -68,10 +70,14 @@ async function main() {
 
     // ─── 功能模块 ───
     const idleCare = new IdleCareScheduler(bus, bubble, dialogue, memory);
-    const hourlyChime = new HourlyChime(bubble, dialogue);
+    const hourlyChime = new HourlyChime(bubble, dialogue, storage);
     const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue);
-    const systemMonitor = new SystemMonitor(bubble);
-    const contextAwareness = new ContextAwareness(bus, bubble, dialogue);
+    const systemMonitor = new SystemMonitor(bubble, storage);
+    const contextAwareness = new ContextAwareness(bus, bubble, dialogue, storage);
+
+    // ─── v0.5.0: 特殊日期 + 时段问候 ───
+    const specialDates = new SpecialDateManager(bubble, dialogue, effects, storage);
+    const greeting = new GreetingManager(bubble, dialogue, effects);
 
     // 点击宠物 → 对话引擎选取台词 + 粒子特效
     bus.on('pet:clicked', () => {
@@ -182,12 +188,24 @@ async function main() {
     animation.start();
     await memory.start(); // 记忆系统需优先启动（加载历史数据）
     idleCare.start();
-    hourlyChime.start();
-    systemMonitor.start();
-    contextAwareness.start();
+    await hourlyChime.start();
+    await systemMonitor.start();
+    await contextAwareness.start();
 
-    // 记录今日活跃
+    // ─── v0.5.0: 首次启动检测 + 特殊日期 + 时段问候 ───
+    const lastActiveDate = await storage.get<string>('lastActiveDate', '');
+    const today = new Date().toISOString().slice(0, 10);
+    const isFirstLaunchToday = lastActiveDate !== today;
+
+    // 记录今日活跃（放在检测之后，确保比较的是昨天的值）
     storage.recordActivity();
+
+    // 延迟 3 秒启动特殊日期检查（等气泡系统完全就绪）
+    setTimeout(async () => {
+      await specialDates.checkToday();
+      // 问候在特殊日期之后 2 秒触发（避免重叠）
+      setTimeout(() => greeting.checkGreeting(isFirstLaunchToday), 2000);
+    }, 3000);
 
     // ─── 生命周期 ───
     window.addEventListener('beforeunload', async () => {
