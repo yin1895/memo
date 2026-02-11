@@ -102,4 +102,6 @@ export type AppEvents = {
   'context:changed': { from: string; to: string };
   /** 记忆系统洞察事件（v0.4.0） */
   'memory:insight': { type: string; message: string };
+  /** 特殊日期触发（v0.5.0） */
+  'specialdate:triggered': { name: string; effectType: string };
 };

@@ -1,22 +1,21 @@
 /**
  * 台词库 - 元气活泼风格 🐦
  *
- * v0.3.0: 从平面数组升级为场景化 DialogueEntry 系统。
- * 保留旧的常量导出以兼容直接引用，
- * 同时提供 DIALOGUE_ENTRIES 供 DialogueEngine 使用。
- *
+ * 所有台词通过 DialogueEntry 数组提供给 DialogueEngine。
  * 添加新台词：往对应场景的 lines 数组中追加即可。
  * 添加新场景：新增一个 DialogueEntry 对象。
+ *
+ * v0.3.0: 场景化 DialogueEntry 系统
+ * v0.4.0: 反思性对话台词
+ * v0.5.0: 特殊日期 + 时段问候台词
  */
 import type { DialogueEntry } from './dialogue-engine';
 
 // ────────────────────────────────────────
-// 兼容旧模块的直接导出
-// v0.4.0: 所有模块已迁移至 DialogueEngine，以下常量仅保留供参考
+// 内部台词常量（仅在本文件中使用，构建 DIALOGUE_ENTRIES）
 // ────────────────────────────────────────
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('click') */
-export const CLICK_LINES = [
+const CLICK_LINES = [
   '嘿嘿！干嘛戳我呀？😆',
   '被发现了！我在偷偷看你工作~',
   '啾啾！你好呀！💕',
@@ -35,8 +34,7 @@ export const CLICK_LINES = [
   '你的指尖好温柔～再来一次嘛！',
 ];
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('idle_care') */
-export const IDLE_CARE_LINES = [
+const IDLE_CARE_LINES = [
   '坐了很久啦，起来活动活动吧！💪',
   '嘿！该伸个懒腰了～身体很重要哦！',
   '喝口水吧！今天喝够 8 杯了吗？💧',
@@ -50,36 +48,7 @@ export const IDLE_CARE_LINES = [
   '久坐对腰不好！站起来扭扭腰～',
 ];
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('hourly', { hour }) */
-export const HOURLY_LINES: Record<number, string> = {
-  0:  '午夜了！🌙 早点休息好不好？',
-  1:  '凌晨 1 点了…你还在忙吗？注意身体！',
-  2:  '凌晨 2 点！真的该睡了！😴',
-  3:  '凌晨 3 点…拜托，快去睡觉！',
-  4:  '天快亮了！如果还没睡…现在还来得及！',
-  5:  '早上 5 点～起这么早？好勤奋！🌅',
-  6:  '6 点啦！早安！新的一天开始了！☀️',
-  7:  '早上 7 点！吃早餐了吗？🥐',
-  8:  '8 点！元气满满地开始工作吧！💪',
-  9:  '上午 9 点～专注时间到！加油！',
-  10: '10 点啦！状态正好，继续冲！🔥',
-  11: '11 点了～再坚持一下就到午饭时间了！',
-  12: '中午 12 点！午餐时间！🍱 好好吃饭哦！',
-  13: '下午 1 点～饭后适当休息一下吧！',
-  14: '下午 2 点！最容易犯困的时候，精神！💥',
-  15: '下午 3 点～来杯下午茶提提神？☕',
-  16: '下午 4 点！冲刺时间！目标快达成了！',
-  17: '5 点啦！今天的任务完成了吗？📋',
-  18: '傍晚 6 点～辛苦了！该放松一下啦！🌇',
-  19: '晚上 7 点！享受晚餐和自由时光吧！',
-  20: '晚上 8 点～做些自己喜欢的事吧！🎮',
-  21: '晚上 9 点！今天过得怎么样？😊',
-  22: '晚上 10 点了～差不多该准备休息啦！🌛',
-  23: '晚上 11 点！别熬夜哦，早睡早起！💤',
-};
-
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('pomodoro_start') */
-export const POMODORO_START_LINES = [
+const POMODORO_START_LINES = [
   '专注模式启动！🍅 一起加油吧！',
   '开始专注 25 分钟！我会安静陪着你～',
   '番茄时间开始！💪 你可以的！',
@@ -87,8 +56,7 @@ export const POMODORO_START_LINES = [
   '冲鸭！25 分钟后见！我先安静～🤫',
 ];
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('pomodoro_break') */
-export const POMODORO_BREAK_LINES = [
+const POMODORO_BREAK_LINES = [
   '叮！🍅 25 分钟到了！休息 5 分钟吧！',
   '太棒了！又完成了一个番茄！🎉 起来走走～',
   '专注结束！站起来活动活动！💃',
@@ -96,16 +64,14 @@ export const POMODORO_BREAK_LINES = [
   '完美的 25 分钟！你太强了！🏆',
 ];
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('pomodoro_resume') */
-export const POMODORO_RESUME_LINES = [
+const POMODORO_RESUME_LINES = [
   '休息结束！准备好继续了吗？🔥',
   '充电完毕！让我们再冲一波！⚡',
   '5 分钟到啦！回来继续加油！💪',
   '休息够了吧？再来一个番茄！🍅',
 ];
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('affirmation') */
-export const AFFIRMATION_LINES = [
+const AFFIRMATION_LINES = [
   '其实你已经做得很棒了！别给自己太大压力～',
   '一步一步来，慢慢的也是进步！🌱',
   '记住：你值得所有好的事情！✨',
@@ -119,8 +85,7 @@ export const AFFIRMATION_LINES = [
 // 行为感知台词（新增 v0.3.0）
 // ────────────────────────────────────────
 
-/** 编码场景 */
-export const CONTEXT_CODING_LINES = [
+const CONTEXT_CODING_LINES = [
   '又在写代码啦？记得多喝水哦！💧',
   'Bug 终结者上线！加油鸭！🦆',
   '代码写得好，头发掉得少～注意休息！',
@@ -133,8 +98,7 @@ export const CONTEXT_CODING_LINES = [
   '写代码的你，专注的样子真帅！✨',
 ];
 
-/** 浏览器场景 */
-export const CONTEXT_BROWSING_LINES = [
+const CONTEXT_BROWSING_LINES = [
   '冲浪愉快～别忘了收藏好东西！📌',
   '网上冲浪也要注意时间哦～',
   '看到有趣的东西了吗？分享给我听听嘛！',
@@ -145,8 +109,7 @@ export const CONTEXT_BROWSING_LINES = [
   '网页加载中…我们来比赛谁先眨眼！👀',
 ];
 
-/** 游戏场景 */
-export const CONTEXT_GAMING_LINES = [
+const CONTEXT_GAMING_LINES = [
   '打游戏要开心哦！别太上头了～🎮',
   '赢了吗赢了吗？给我比个耶！✌️',
   '游戏时间！我来当你的啦啦队！📣',
@@ -157,8 +120,7 @@ export const CONTEXT_GAMING_LINES = [
   '输了也没关系！开心最重要啦～',
 ];
 
-/** 音乐场景 */
-export const CONTEXT_MUSIC_LINES = [
+const CONTEXT_MUSIC_LINES = [
   '好听吗好听吗？我也想听！🎵',
   '♪ 一起摇摆～啾啾啾～',
   '听音乐的时光最惬意了～🎶',
@@ -169,8 +131,7 @@ export const CONTEXT_MUSIC_LINES = [
   '♫ 啾啾～我也来唱一段！（走音了）',
 ];
 
-/** 会议场景 */
-export const CONTEXT_MEETING_LINES = [
+const CONTEXT_MEETING_LINES = [
   '开会加油！我在旁边给你打气！💪',
   '会议中～我先安静一会儿…🤫',
   '认真开会的你最帅了！我不打扰～',
@@ -179,8 +140,7 @@ export const CONTEXT_MEETING_LINES = [
   '我帮你默默加油！你说得一定很棒！✨',
 ];
 
-/** 闲置/桌面场景 */
-export const CONTEXT_IDLE_LINES = [
+const CONTEXT_IDLE_LINES = [
   '发呆中…一起发呆吧～😶',
   '好安静啊～在思考什么呢？',
   '无所事事的时光也很珍贵哦～🌸',
@@ -345,9 +305,131 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
     ],
     conditions: { dominantApp: 'browsing' },
   },
-];
 
-/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine() */
-export function randomLine(lines: string[]): string {
-  return lines[Math.floor(Math.random() * lines.length)];
-}
+  // ────────────────────────────────────────
+  // 特殊日期台词（v0.5.0）
+  // ────────────────────────────────────────
+
+  // 生日（9月20日）
+  {
+    scene: 'special_birthday',
+    lines: [
+      '生日快乐！🎂✨ 今天你是全世界最闪亮的小太阳！',
+      '🎉 今天是你的大日子！希望每一天都像今天一样快乐！',
+      '生日快乐呀！吹蜡烛的时候记得许个愿哦～🕯️💫',
+      '哇！今天是你的生日耶！蛋糕🍰、礼物🎁、还有我的祝福，统统给你！',
+      '全宇宙最特别的人，生日快乐！🌟 今天你想做什么都可以！',
+    ],
+  },
+
+  // 情人节（2月14日）
+  {
+    scene: 'special_valentine',
+    lines: [
+      '情人节快乐！💕 今天的空气里都是甜甜的味道～',
+      '2月14日！爱你的心每天都在，今天特别多一点 💝',
+      '情人节到啦！🌹 不管多忙，记得感受身边的爱哦！',
+      'Happy Valentine\'s Day！💌 你值得世界上所有的温柔～',
+      '今天是表达爱的日子！我先来：啾啾！超喜欢你！💗',
+    ],
+  },
+
+  // 圣诞节（12月25日）
+  {
+    scene: 'special_christmas',
+    lines: [
+      'Merry Christmas！🎄✨ 圣诞老人给你带了什么礼物呀？',
+      '叮叮当～叮叮当～🎅 圣诞快乐！今天要开心哦！',
+      '下雪了吗？不管有没有，圣诞的温暖我来给你！❄️🎁',
+      '圣诞快乐！🎄 今天吃火鸡还是吃蛋糕？都行都行！',
+    ],
+  },
+
+  // 新年（1月1日）
+  {
+    scene: 'special_newyear',
+    lines: [
+      '新年快乐！🎆✨ 新的一年，新的开始，一切都会更好的！',
+      '🎊 Happy New Year！去年的遗憾就让它过去吧，今年一起加油！',
+      '新年的第一天！许个新年愿望吧～我帮你守护它 🌟',
+      '🎉 新的一年到了！希望你天天开心、事事顺利！',
+    ],
+  },
+
+  // 520（5月20日）
+  {
+    scene: 'special_520',
+    lines: [
+      '520！今天是个特别的日子～我爱你 💕',
+      '5月20日！我要大声说：超——喜——欢——你！💗',
+      '520 快乐！你是我最珍贵的存在 🌻✨',
+      '今天是 520 呢！爱你每一天，不止今天 💝',
+    ],
+  },
+
+  // ────────────────────────────────────────
+  // 时段问候台词（v0.5.0）
+  // ────────────────────────────────────────
+
+  // 早安（6:00-10:00）
+  {
+    scene: 'greeting_morning',
+    lines: [
+      '早上好呀！☀️ 今天也要元气满满哦！',
+      '早安～新的一天开始啦！先喝杯水吧 💧',
+      '早起的鸟儿有虫吃！你今天起得真棒 🐦☀️',
+      '嘿！早安！今天的你一定会很棒的！✨',
+      '太阳出来啦～我也醒啦！早早早！🌅',
+      '早上好！昨晚睡得好吗？今天要加油哦 💪',
+    ],
+  },
+
+  // 午安（12:00-14:00）
+  {
+    scene: 'greeting_noon',
+    lines: [
+      '中午好！🍱 记得好好吃午饭哦！',
+      '午饭时间到～今天想吃什么呀？🍜',
+      '下午好！吃完饭休息一下再继续吧～',
+      '中午啦！适当午休可以让下午更有精神哦 😊',
+      '午安～饭后可以散散步放松一下！🌿',
+    ],
+  },
+
+  // 傍晚（17:00-19:00）
+  {
+    scene: 'greeting_evening',
+    lines: [
+      '傍晚好！🌇 今天辛苦啦，快要下班了吧？',
+      '夕阳好美呀～今天过得怎么样？✨',
+      '一天快结束了！你今天做得很棒哦 💪',
+      '傍晚啦！放松一下心情，享受美好的晚霞 🌅',
+      '辛苦了一天！晚上要好好犒劳自己 🍚',
+    ],
+  },
+
+  // 晚安（22:00-1:00）
+  {
+    scene: 'greeting_night',
+    lines: [
+      '晚安～🌙 今天辛苦了，好好休息吧！',
+      '夜深了，早点睡哦！明天又是美好的一天 💤',
+      '晚安！今天的你也很棒，做个好梦 🌟',
+      '月亮出来了～🌛 该放下手机休息啦～',
+      '一天结束了！带着满足入睡吧，晚安 💫',
+      '该睡觉啦！我帮你暖被窝好不好？😴',
+    ],
+  },
+
+  // 深夜关怀（1:00-5:00）
+  {
+    scene: 'greeting_latenight',
+    lines: [
+      '都这个点了还不睡呀…🌙 我有点担心你',
+      '深夜了…你还好吗？不管在忙什么，身体最重要哦 💫',
+      '嘘…这么晚了，我陪你，但你要答应我快点睡 🤫',
+      '凌晨几点了你知道吗…快去睡觉！明天还要加油呢 😴',
+      '夜猫子～虽然夜晚很安静，但身体会抗议的哦 🌙',
+    ],
+  },
+];

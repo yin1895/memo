@@ -318,3 +318,24 @@ canvas#pet {
 .fx-bounce {
   animation-name: bounce-fx;
 }
+
+/* 彩纸飘落（纪念日/生日） */
+@keyframes confetti-fall {
+  0%   { transform: translateY(-20px) rotate(0deg) scale(1); opacity: 1; }
+  40%  { transform: translateY(30px) rotate(180deg) scale(1.1); opacity: 0.9; }
+  100% { transform: translateY(100px) rotate(360deg) scale(0.3); opacity: 0; }
+}
+.fx-confetti {
+  animation-name: confetti-fall;
+}
+
+/* 阳光光芒（小太阳致敬） */
+@keyframes sunshine-glow {
+  0%   { transform: scale(0) rotate(0deg); opacity: 0; }
+  30%  { transform: scale(1.5) rotate(45deg); opacity: 1; }
+  60%  { transform: scale(1) rotate(90deg); opacity: 0.8; }
+  100% { transform: scale(1.8) rotate(180deg); opacity: 0; }
+}
+.fx-sunshine {
+  animation-name: sunshine-glow;
+}

@@ -12,7 +12,7 @@
  */
 
 /** 特效类型 */
-export type EffectType = 'hearts' | 'sparks' | 'notes' | 'zzz' | 'bounce';
+export type EffectType = 'hearts' | 'sparks' | 'notes' | 'zzz' | 'bounce' | 'confetti' | 'sunshine';
 
 /** 特效配置 */
 interface EffectConfig {
@@ -57,6 +57,18 @@ const EFFECT_CONFIGS: Record<EffectType, EffectConfig> = {
     count: 3,
     duration: 800,
   },
+  confetti: {
+    chars: ['🎊', '🎉', '✨', '🎈', '💫'],
+    animClass: 'fx-confetti',
+    count: 5,
+    duration: 1500,
+  },
+  sunshine: {
+    chars: ['🌻', '☀️', '🌞', '✨'],
+    animClass: 'fx-sunshine',
+    count: 4,
+    duration: 1400,
+  },
 };
 
 export class EffectsManager {
@@ -97,6 +109,16 @@ export class EffectsManager {
   /** 播放弹跳特效（番茄钟开始） */
   playBounce(): void {
     this.spawn('bounce');
+  }
+
+  /** 播放彩纸特效（纪念日/生日） */
+  playConfetti(): void {
+    this.spawn('confetti');
+  }
+
+  /** 播放阳光特效（小太阳致敬） */
+  playSunshine(): void {
+    this.spawn('sunshine');
   }
 
   /** 根据行为上下文播放对应特效 */
