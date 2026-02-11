@@ -14,6 +14,63 @@ export interface Manifest {
   animations: Record<string, AnimDef>;
 }
 
+// ────────────────────────────────────────
+// 记忆系统数据类型（v0.4.0）
+// ────────────────────────────────────────
+
+import type { AppContext } from './features/dialogue-engine';
+
+/** 记忆事件类型 */
+export type MemoryEventType =
+  | 'interaction'
+  | 'context_switch'
+  | 'pomodoro_complete'
+  | 'app_active';
+
+/** 单条记忆事件 */
+export interface MemoryEvent {
+  type: MemoryEventType;
+  timestamp: number;
+  data?: Record<string, unknown>;
+}
+
+/** 每日汇总 */
+export interface DailySummary {
+  /** 日期 YYYY-MM-DD */
+  date: string;
+  /** 活跃小时范围 [最早, 最晚] */
+  activeHours: [number, number];
+  /** 当日主要行为上下文 */
+  dominantContext: AppContext;
+  /** 各上下文的持续时长（分钟） */
+  contextDurations: Partial<Record<AppContext, number>>;
+  /** 当日交互次数 */
+  interactionCount: number;
+  /** 当日完成的番茄数 */
+  pomodoroCount: number;
+}
+
+/** 用户画像（持久化） */
+export interface UserProfile {
+  /** 亲密度等级原始值：累计总交互次数 */
+  totalInteractions: number;
+  /** 连续使用天数 */
+  streakDays: number;
+  /** 最后活跃日期 YYYY-MM-DD */
+  lastActiveDate: string;
+  /** 最近 7 天的每日汇总 */
+  dailySummaries: DailySummary[];
+}
+
+/** 记忆快照（传入对话引擎的聚合数据） */
+export interface MemorySnapshot {
+  affinityLevel: number;
+  sleepPattern: 'normal' | 'night_owl' | 'early_bird';
+  dominantApp: AppContext;
+  streak: number;
+  workloadTrend: 'increasing' | 'stable' | 'decreasing';
+}
+
 /**
  * EventBus 事件类型映射
  *
@@ -43,4 +100,6 @@ export type AppEvents = {
   'pomodoro:stop': void;
   /** 行为上下文变更（v0.3.0） */
   'context:changed': { from: string; to: string };
+  /** 记忆系统洞察事件（v0.4.0） */
+  'memory:insight': { type: string; message: string };
 };

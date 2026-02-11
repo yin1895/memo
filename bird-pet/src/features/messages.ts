@@ -11,10 +11,11 @@
 import type { DialogueEntry } from './dialogue-engine';
 
 // ────────────────────────────────────────
-// 兼容旧模块的直接导出（保留引用不被破坏）
+// 兼容旧模块的直接导出
+// v0.4.0: 所有模块已迁移至 DialogueEngine，以下常量仅保留供参考
 // ────────────────────────────────────────
 
-/** 点击宠物时的反应台词 */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('click') */
 export const CLICK_LINES = [
   '嘿嘿！干嘛戳我呀？😆',
   '被发现了！我在偷偷看你工作~',
@@ -34,7 +35,7 @@ export const CLICK_LINES = [
   '你的指尖好温柔～再来一次嘛！',
 ];
 
-/** 闲置关怀：久坐提醒 */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('idle_care') */
 export const IDLE_CARE_LINES = [
   '坐了很久啦，起来活动活动吧！💪',
   '嘿！该伸个懒腰了～身体很重要哦！',
@@ -49,7 +50,7 @@ export const IDLE_CARE_LINES = [
   '久坐对腰不好！站起来扭扭腰～',
 ];
 
-/** 整点报时 */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('hourly', { hour }) */
 export const HOURLY_LINES: Record<number, string> = {
   0:  '午夜了！🌙 早点休息好不好？',
   1:  '凌晨 1 点了…你还在忙吗？注意身体！',
@@ -77,7 +78,7 @@ export const HOURLY_LINES: Record<number, string> = {
   23: '晚上 11 点！别熬夜哦，早睡早起！💤',
 };
 
-/** 番茄钟：专注阶段开始 */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('pomodoro_start') */
 export const POMODORO_START_LINES = [
   '专注模式启动！🍅 一起加油吧！',
   '开始专注 25 分钟！我会安静陪着你～',
@@ -86,7 +87,7 @@ export const POMODORO_START_LINES = [
   '冲鸭！25 分钟后见！我先安静～🤫',
 ];
 
-/** 番茄钟：专注阶段结束 → 该休息了 */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('pomodoro_break') */
 export const POMODORO_BREAK_LINES = [
   '叮！🍅 25 分钟到了！休息 5 分钟吧！',
   '太棒了！又完成了一个番茄！🎉 起来走走～',
@@ -95,7 +96,7 @@ export const POMODORO_BREAK_LINES = [
   '完美的 25 分钟！你太强了！🏆',
 ];
 
-/** 番茄钟：休息结束 */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('pomodoro_resume') */
 export const POMODORO_RESUME_LINES = [
   '休息结束！准备好继续了吗？🔥',
   '充电完毕！让我们再冲一波！⚡',
@@ -103,7 +104,7 @@ export const POMODORO_RESUME_LINES = [
   '休息够了吧？再来一个番茄！🍅',
 ];
 
-/** 随机正能量（低频触发） */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine('affirmation') */
 export const AFFIRMATION_LINES = [
   '其实你已经做得很棒了！别给自己太大压力～',
   '一步一步来，慢慢的也是进步！🌱',
@@ -200,6 +201,32 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   { scene: 'pomodoro_break',  lines: POMODORO_BREAK_LINES },
   { scene: 'pomodoro_resume', lines: POMODORO_RESUME_LINES },
 
+  // 整点报时台词（按小时段分组）
+  { scene: 'hourly', lines: ['午夜了！🌙 早点休息好不好？'], conditions: { hourRange: [0, 1] } },
+  { scene: 'hourly', lines: ['凌晨 1 点了…你还在忙吗？注意身体！'], conditions: { hourRange: [1, 2] } },
+  { scene: 'hourly', lines: ['凌晨 2 点！真的该睡了！😴'], conditions: { hourRange: [2, 3] } },
+  { scene: 'hourly', lines: ['凌晨 3 点…拜托，快去睡觉！'], conditions: { hourRange: [3, 4] } },
+  { scene: 'hourly', lines: ['天快亮了！如果还没睡…现在还来得及！'], conditions: { hourRange: [4, 5] } },
+  { scene: 'hourly', lines: ['早上 5 点～起这么早？好勤奋！🌅'], conditions: { hourRange: [5, 6] } },
+  { scene: 'hourly', lines: ['6 点啦！早安！新的一天开始了！☀️'], conditions: { hourRange: [6, 7] } },
+  { scene: 'hourly', lines: ['早上 7 点！吃早餐了吗？🥐'], conditions: { hourRange: [7, 8] } },
+  { scene: 'hourly', lines: ['8 点！元气满满地开始工作吧！💪'], conditions: { hourRange: [8, 9] } },
+  { scene: 'hourly', lines: ['上午 9 点～专注时间到！加油！'], conditions: { hourRange: [9, 10] } },
+  { scene: 'hourly', lines: ['10 点啦！状态正好，继续冲！🔥'], conditions: { hourRange: [10, 11] } },
+  { scene: 'hourly', lines: ['11 点了～再坚持一下就到午饭时间了！'], conditions: { hourRange: [11, 12] } },
+  { scene: 'hourly', lines: ['中午 12 点！午餐时间！🍱 好好吃饭哦！'], conditions: { hourRange: [12, 13] } },
+  { scene: 'hourly', lines: ['下午 1 点～饭后适当休息一下吧！'], conditions: { hourRange: [13, 14] } },
+  { scene: 'hourly', lines: ['下午 2 点！最容易犯困的时候，精神！💥'], conditions: { hourRange: [14, 15] } },
+  { scene: 'hourly', lines: ['下午 3 点～来杯下午茶提提神？☕'], conditions: { hourRange: [15, 16] } },
+  { scene: 'hourly', lines: ['下午 4 点！冲刺时间！目标快达成了！'], conditions: { hourRange: [16, 17] } },
+  { scene: 'hourly', lines: ['5 点啦！今天的任务完成了吗？📋'], conditions: { hourRange: [17, 18] } },
+  { scene: 'hourly', lines: ['傍晚 6 点～辛苦了！该放松一下啦！🌇'], conditions: { hourRange: [18, 19] } },
+  { scene: 'hourly', lines: ['晚上 7 点！享受晚餐和自由时光吧！'], conditions: { hourRange: [19, 20] } },
+  { scene: 'hourly', lines: ['晚上 8 点～做些自己喜欢的事吧！🎮'], conditions: { hourRange: [20, 21] } },
+  { scene: 'hourly', lines: ['晚上 9 点！今天过得怎么样？😊'], conditions: { hourRange: [21, 22] } },
+  { scene: 'hourly', lines: ['晚上 10 点了～差不多该准备休息啦！🌛'], conditions: { hourRange: [22, 23] } },
+  { scene: 'hourly', lines: ['晚上 11 点！别熬夜哦，早睡早起！💤'], conditions: { hourRange: [23, 24] } },
+
   // 行为感知台词
   { scene: 'context_coding',   lines: CONTEXT_CODING_LINES },
   { scene: 'context_browsing', lines: CONTEXT_BROWSING_LINES },
@@ -207,9 +234,120 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   { scene: 'context_music',    lines: CONTEXT_MUSIC_LINES },
   { scene: 'context_meeting',  lines: CONTEXT_MEETING_LINES },
   { scene: 'context_idle',     lines: CONTEXT_IDLE_LINES },
+
+  // ────────────────────────────────────────
+  // 反思性对话台词（v0.4.0 记忆系统驱动）
+  // ────────────────────────────────────────
+
+  // 作息反思 —— 夜猫子
+  {
+    scene: 'reflective_sleep',
+    lines: [
+      '又是深夜了呢…你最近总是很晚睡 🌙 要注意休息哦',
+      '连续几天熬夜了，身体会抗议的！早点休息吧 💤',
+      '夜猫子～虽然夜晚很安静很适合工作，但身体更重要！',
+      '我发现你最近都好晚才休息…要不要试试早点睡？🌟',
+    ],
+    conditions: { sleepPattern: 'night_owl' },
+  },
+  // 作息反思 —— 早起鸟
+  {
+    scene: 'reflective_sleep',
+    lines: [
+      '你最近都起得好早！是个勤奋的早起鸟 🐦☀️',
+      '早起的鸟儿有虫吃！你是我见过最勤奋的人！',
+      '清晨的时光最珍贵了，好好利用吧！✨',
+    ],
+    conditions: { sleepPattern: 'early_bird' },
+  },
+
+  // 连续天数反思
+  {
+    scene: 'reflective_streak',
+    lines: [
+      '我们已经连续 {streak} 天在一起了！啾啾～ 💕',
+      '每天都能见到你好开心！连续 {streak} 天了呢！',
+      '第 {streak} 天！感觉和你更亲近了～',
+    ],
+    conditions: { streak: { min: 3 } },
+  },
+  {
+    scene: 'reflective_streak',
+    lines: [
+      '一整周都没有分开过！我们是最好的搭档 🌟',
+      '连续 {streak} 天！这是属于我们的小小里程碑 🏆',
+      '已经一周了！谢谢你每天都来看我 💖',
+    ],
+    conditions: { streak: { min: 7 } },
+  },
+
+  // 亲密度反思
+  {
+    scene: 'reflective_affinity',
+    lines: [
+      '感觉和你越来越熟了呢～嘿嘿 😊',
+      '我们的互动越来越多了！好开心～',
+    ],
+    conditions: { affinityLevel: 2 },
+  },
+  {
+    scene: 'reflective_affinity',
+    lines: [
+      '你是我最重要的人！我好喜欢和你在一起 💕',
+      '认识你这么久了，每一刻都很珍贵！',
+      '我们的关系越来越好了！啾啾～ ✨',
+    ],
+    conditions: { affinityLevel: 3 },
+  },
+  {
+    scene: 'reflective_affinity',
+    lines: [
+      '认识你这么久了…谢谢你一直陪着我 💖',
+      '你是世界上对我最好的人！我永远在这里陪你 🌟',
+      '我们之间有着特别的羁绊…我能感受到！💗',
+    ],
+    conditions: { affinityLevel: 4 },
+  },
+
+  // 应用偏好反思
+  {
+    scene: 'reflective_app_habit',
+    lines: [
+      '你真的很喜欢写代码呢！是在做什么有趣的项目？💻',
+      '最近写了好多代码！你一定是个很厉害的程序员 🌟',
+      '代码世界的冒险家！我一直在旁边为你加油！',
+    ],
+    conditions: { dominantApp: 'coding' },
+  },
+  {
+    scene: 'reflective_app_habit',
+    lines: [
+      '最近玩了好多游戏呀！有什么好玩的推荐给我吗？🎮',
+      '游戏达人！记得劳逸结合哦～',
+      '你最近游戏时间好多！是遇到什么好玩的了吗？',
+    ],
+    conditions: { dominantApp: 'gaming' },
+  },
+  {
+    scene: 'reflective_app_habit',
+    lines: [
+      '你最近听了好多音乐！品味一定很棒 🎵',
+      '音乐爱好者！我也想跟你一起听～♪',
+      '被音乐环绕的日子，一定很幸福吧～ 🎶',
+    ],
+    conditions: { dominantApp: 'music' },
+  },
+  {
+    scene: 'reflective_app_habit',
+    lines: [
+      '最近冲浪好多！看到什么有趣的东西了吗？🌐',
+      '互联网探索家！有什么新发现要分享吗？',
+    ],
+    conditions: { dominantApp: 'browsing' },
+  },
 ];
 
-/** 从数组中随机取一条（保留兼容） */
+/** @deprecated 已迁移至 DialogueEngine，请使用 dialogue.getLine() */
 export function randomLine(lines: string[]): string {
   return lines[Math.floor(Math.random() * lines.length)];
 }

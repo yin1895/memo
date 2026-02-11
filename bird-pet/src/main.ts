@@ -22,6 +22,7 @@ import { setupInteraction } from './core/interaction';
 import { UpdateController } from './core/updater';
 import { BubbleManager } from './core/bubble-manager';
 import { StorageService } from './core/storage';
+import { MemorySystem } from './core/memory';
 import { EffectsManager } from './core/effects';
 import { IdleCareScheduler } from './features/idle-care';
 import { HourlyChime } from './features/hourly-chime';
@@ -62,10 +63,13 @@ async function main() {
     const dialogue = new DialogueEngine(DIALOGUE_ENTRIES);
     const effects = new EffectsManager();
 
+    // ─── v0.4.0: 记忆系统 ───
+    const memory = new MemorySystem(bus, storage);
+
     // ─── 功能模块 ───
-    const idleCare = new IdleCareScheduler(bus, bubble);
-    const hourlyChime = new HourlyChime(bubble);
-    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime);
+    const idleCare = new IdleCareScheduler(bus, bubble, dialogue, memory);
+    const hourlyChime = new HourlyChime(bubble, dialogue);
+    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue);
     const systemMonitor = new SystemMonitor(bubble);
     const contextAwareness = new ContextAwareness(bus, bubble, dialogue);
 
@@ -90,6 +94,16 @@ async function main() {
     // 番茄钟开始 → 弹跳特效
     bus.on('pomodoro:focus', () => {
       effects.playBounce();
+    });
+
+    // 记忆系统洞察 → 反思性对话（v0.4.0）
+    bus.on('memory:insight', ({ type }) => {
+      const scene = `reflective_${type}` as import('./features/dialogue-engine').DialogueScene;
+      const snapshot = memory.getSnapshot();
+      const line = dialogue.getLine(scene, { hour: new Date().getHours(), ...snapshot });
+      if (line !== '啾啾！') {
+        bubble.say({ text: line, priority: 'high', duration: 6000 });
+      }
     });
 
     const updater = new UpdateController({
@@ -166,6 +180,7 @@ async function main() {
 
     // ─── 启动动画 & 功能模块 ───
     animation.start();
+    await memory.start(); // 记忆系统需优先启动（加载历史数据）
     idleCare.start();
     hourlyChime.start();
     systemMonitor.start();
@@ -182,6 +197,8 @@ async function main() {
       pomodoro.stop();
       systemMonitor.stop();
       contextAwareness.destroy();
+      memory.stop();
+      await memory.save();
       await storage.save();
       await bubble.dispose();
       bus.dispose();
