@@ -7,6 +7,7 @@
 import './memory-panel.css';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getLocalDateKey } from './utils';
 
 /** 主窗口发来的面板数据结构 */
 interface PanelData {
@@ -94,12 +95,12 @@ function renderPanel(data: PanelData): void {
   const heatmap = document.getElementById('heatmap')!;
   heatmap.innerHTML = '';
 
-  // 生成最近 7 天日期
+  // 生成最近 7 天日期（本地时区，与记忆系统一致）
   const days: string[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(getLocalDateKey(d));
   }
 
   const summaryMap = new Map(data.dailySummaries.map(s => [s.date, s]));

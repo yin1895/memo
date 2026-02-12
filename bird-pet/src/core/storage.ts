@@ -28,6 +28,8 @@ export const STORE_KEYS = {
   PET_OWNER: 'petOwner',
   /** 窗口位置记忆（v1.0.0） */
   WINDOW_POSITION: 'windowPosition',
+  /** 已触发的里程碑集合（v1.1.0） */
+  TRIGGERED_MILESTONES: 'triggeredMilestones',
 } as const;
 
 /** 宠物主人信息 */
@@ -156,5 +158,19 @@ export class StorageService {
   /** 保存窗口位置 */
   async setWindowPosition(pos: { x: number; y: number }): Promise<void> {
     await this.set(STORE_KEYS.WINDOW_POSITION, pos);
+  }
+
+  /** 获取已触发的里程碑集合 */
+  async getTriggeredMilestones(): Promise<string[]> {
+    return this.get(STORE_KEYS.TRIGGERED_MILESTONES, []);
+  }
+
+  /** 添加已触发的里程碑 */
+  async addTriggeredMilestone(key: string): Promise<void> {
+    const milestones = await this.getTriggeredMilestones();
+    if (!milestones.includes(key)) {
+      milestones.push(key);
+      await this.set(STORE_KEYS.TRIGGERED_MILESTONES, milestones);
+    }
   }
 }

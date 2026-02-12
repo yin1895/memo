@@ -7,11 +7,11 @@
  * 同时负责里程碑检测与 memory:milestone 事件发射。
  */
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { emitTo } from '@tauri-apps/api/event';
+import { emitTo, listen } from '@tauri-apps/api/event';
 import type { EventBus } from '../events';
 import type { AppEvents, MemorySnapshot, UserProfile } from '../types';
 import type { MemorySystem } from '../core/memory';
-import type { PetOwnerProfile } from '../core/storage';
+import type { PetOwnerProfile, StorageService } from '../core/storage';
 
 /** 亲密度等级名称 */
 const AFFINITY_NAMES: Record<number, string> = {
@@ -28,18 +28,22 @@ const INTERACTION_MILESTONES = [100, 500, 1000, 2000, 5000];
 export class MemoryCardManager {
   private bus: EventBus<AppEvents>;
   private memory: MemorySystem;
+  private storage: StorageService;
   private petOwner: PetOwnerProfile;
   private daysSinceMet: number;
   private cardWindow: WebviewWindow | null = null;
+  private unlistenReady: (() => void) | null = null;
 
   constructor(
     bus: EventBus<AppEvents>,
     memory: MemorySystem,
+    storage: StorageService,
     petOwner: PetOwnerProfile,
     daysSinceMet: number,
   ) {
     this.bus = bus;
     this.memory = memory;
+    this.storage = storage;
     this.petOwner = petOwner;
     this.daysSinceMet = daysSinceMet;
   }
@@ -51,7 +55,7 @@ export class MemoryCardManager {
     try {
       const snapshot = this.memory.getSnapshot();
       const profile = this.memory.getProfile();
-      const milestone = this.detectMilestone(snapshot, profile);
+      const milestone = await this.detectMilestone(snapshot, profile);
 
       // 发射里程碑事件
       if (milestone) {
@@ -85,36 +89,54 @@ export class MemoryCardManager {
       // 创建或获取卡片窗口
       await this.ensureCardWindow();
 
-      // 等待窗口就绪后发送数据
-      setTimeout(async () => {
-        try {
-          await emitTo('memory-card', 'memory-card:show', cardData);
-        } catch {
-          // 窗口可能还没就绪，再等一下
-          setTimeout(async () => {
-            try {
-              await emitTo('memory-card', 'memory-card:show', cardData);
-            } catch (e) {
-              console.warn('回忆卡片发送数据失败:', e);
-            }
-          }, 1000);
-        }
-      }, 500);
+      // 等待子窗口发射 ready 事件后再发送数据
+      await new Promise<void>((resolve, reject) => {
+        const READY_TIMEOUT = 5000;
+        let settled = false;
+
+        const timeout = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            console.warn('回忆卡片窗口就绪超时，尝试强制发送');
+            emitTo('memory-card', 'memory-card:show', cardData).catch(() => {});
+            resolve();
+          }
+        }, READY_TIMEOUT);
+
+        listen('memory-card:ready', async () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          try {
+            await emitTo('memory-card', 'memory-card:show', cardData);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        }).then((unlisten) => {
+          // 保存 unlisten，在 dispose 中释放
+          this.unlistenReady = unlisten;
+        });
+      });
     } catch (e) {
       console.warn('回忆卡片展示失败:', e);
     }
   }
 
   /**
-   * 检测里程碑
+   * 检测里程碑（持久化去重）
    */
-  private detectMilestone(
+  private async detectMilestone(
     snapshot: MemorySnapshot,
     profile: Readonly<UserProfile>,
-  ): { kind: string; value: number; message: string } | null {
+  ): Promise<{ kind: string; value: number; message: string } | null> {
+    const triggered = await this.storage.getTriggeredMilestones();
+
     // 连续天数里程碑
     for (const threshold of STREAK_MILESTONES) {
-      if (snapshot.streak === threshold) {
+      const key = `streak:${threshold}`;
+      if (snapshot.streak >= threshold && !triggered.includes(key)) {
+        await this.storage.addTriggeredMilestone(key);
         return {
           kind: 'streak',
           value: threshold,
@@ -125,10 +147,9 @@ export class MemoryCardManager {
 
     // 交互次数里程碑
     for (const threshold of INTERACTION_MILESTONES) {
-      if (
-        profile.totalInteractions >= threshold &&
-        profile.totalInteractions < threshold + 10
-      ) {
+      const key = `interaction:${threshold}`;
+      if (profile.totalInteractions >= threshold && !triggered.includes(key)) {
+        await this.storage.addTriggeredMilestone(key);
         return {
           kind: 'interaction',
           value: threshold,
@@ -140,7 +161,9 @@ export class MemoryCardManager {
     // 认识天数里程碑
     const metMilestones = [30, 50, 100, 200, 365];
     for (const threshold of metMilestones) {
-      if (this.daysSinceMet === threshold) {
+      const key = `met_days:${threshold}`;
+      if (this.daysSinceMet >= threshold && !triggered.includes(key)) {
+        await this.storage.addTriggeredMilestone(key);
         return {
           kind: 'met_days',
           value: threshold,
@@ -178,6 +201,10 @@ export class MemoryCardManager {
 
   dispose(): void {
     try {
+      if (this.unlistenReady) {
+        this.unlistenReady();
+        this.unlistenReady = null;
+      }
       this.cardWindow?.close();
     } catch {
       // ignore
