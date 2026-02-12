@@ -24,7 +24,31 @@ export const STORE_KEYS = {
   USER_PROFILE: 'userProfile',
   /** 特殊日期当日触发记录（v0.5.0） */
   SPECIAL_DATE_TRIGGERED: 'specialDateTriggered',
+  /** 宠物主人信息（v1.0.0） */
+  PET_OWNER: 'petOwner',
+  /** 窗口位置记忆（v1.0.0） */
+  WINDOW_POSITION: 'windowPosition',
 } as const;
+
+/** 宠物主人信息 */
+export interface PetOwnerProfile {
+  /** 名字 */
+  name: string;
+  /** 称呼池（随机选取） */
+  nicknames: string[];
+  /** 认识日期 YYYY-MM-DD */
+  metDate: string;
+  /** 生日 MM-DD */
+  birthday: string;
+}
+
+/** 默认主人信息（芊芊 💕） */
+const DEFAULT_PET_OWNER: PetOwnerProfile = {
+  name: '雨芊',
+  nicknames: ['芊芊', '雨芊', '小芊', '芊宝'],
+  metDate: '2026-01-20',
+  birthday: '09-20',
+};
 
 /** 用户偏好结构 */
 export interface UserPreferences {
@@ -34,6 +58,14 @@ export interface UserPreferences {
   systemMonitorEnabled: boolean;
   /** 是否启用行为感知 */
   contextAwarenessEnabled: boolean;
+  /** 勿扰时段开始小时（0-23），-1 表示关闭 */
+  quietHoursStart: number;
+  /** 勿扰时段结束小时（0-23） */
+  quietHoursEnd: number;
+  /** 是否启用深夜降频 */
+  nightModeEnabled: boolean;
+  /** 是否开机自启动 */
+  autoStartEnabled: boolean;
 }
 
 /** 默认偏好 */
@@ -41,6 +73,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   hourlyChimeEnabled: true,
   systemMonitorEnabled: true,
   contextAwarenessEnabled: true,
+  quietHoursStart: -1,
+  quietHoursEnd: -1,
+  nightModeEnabled: true,
+  autoStartEnabled: true,
 };
 
 export class StorageService {
@@ -99,5 +135,26 @@ export class StorageService {
   async setPreferences(prefs: Partial<UserPreferences>): Promise<void> {
     const current = await this.getPreferences();
     await this.set(STORE_KEYS.PREFERENCES, { ...current, ...prefs });
+  }
+
+  /** 获取宠物主人信息 */
+  async getPetOwner(): Promise<PetOwnerProfile> {
+    return this.get(STORE_KEYS.PET_OWNER, DEFAULT_PET_OWNER);
+  }
+
+  /** 更新宠物主人信息 */
+  async setPetOwner(owner: Partial<PetOwnerProfile>): Promise<void> {
+    const current = await this.getPetOwner();
+    await this.set(STORE_KEYS.PET_OWNER, { ...current, ...owner });
+  }
+
+  /** 获取窗口位置 */
+  async getWindowPosition(): Promise<{ x: number; y: number } | null> {
+    return this.get(STORE_KEYS.WINDOW_POSITION, null);
+  }
+
+  /** 保存窗口位置 */
+  async setWindowPosition(pos: { x: number; y: number }): Promise<void> {
+    await this.set(STORE_KEYS.WINDOW_POSITION, pos);
   }
 }
