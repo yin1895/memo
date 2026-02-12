@@ -14,14 +14,14 @@ import { unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { exit } from '@tauri-apps/plugin-process';
 import { EventBus } from './events';
 import type { AppEvents } from './types';
-import { initHint, showHint } from './utils';
+import { initHint, showHint, getLocalDateKey } from './utils';
 import { AnimationEngine } from './core/animation';
 import { ClickThroughManager } from './core/click-through';
 import { MenuController, type MenuItem } from './core/menu';
 import { setupInteraction } from './core/interaction';
 import { UpdateController } from './core/updater';
 import { BubbleManager } from './core/bubble-manager';
-import { StorageService } from './core/storage';
+import { StorageService, STORE_KEYS } from './core/storage';
 import { MemorySystem } from './core/memory';
 import { EffectsManager } from './core/effects';
 import { IdleCareScheduler } from './features/idle-care';
@@ -193,8 +193,8 @@ async function main() {
     await contextAwareness.start();
 
     // ─── v0.5.0: 首次启动检测 + 特殊日期 + 时段问候 ───
-    const lastActiveDate = await storage.get<string>('lastActiveDate', '');
-    const today = new Date().toISOString().slice(0, 10);
+    const lastActiveDate = await storage.get<string>(STORE_KEYS.LAST_ACTIVE_DATE, '');
+    const today = getLocalDateKey();
     const isFirstLaunchToday = lastActiveDate !== today;
 
     // 记录今日活跃（放在检测之后，确保比较的是昨天的值）
