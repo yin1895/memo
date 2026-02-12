@@ -1,0 +1,162 @@
+/**
+ * 回忆卡片样式
+ * v1.0.0 新增
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: transparent;
+  overflow: hidden;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#memory-card-app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#memory-card {
+  width: 280px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 248, 240, 0.95));
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.card-hidden {
+  opacity: 0;
+  transform: scale(0.9) translateY(10px);
+  pointer-events: none;
+}
+
+.card-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+.card-fadeout {
+  opacity: 0;
+  transform: scale(0.95) translateY(-5px);
+  pointer-events: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.card-icon {
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+.card-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.card-close-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.card-close-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #666;
+}
+
+.card-body {
+  padding: 12px 14px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.stat-hero {
+  padding: 6px 0;
+}
+
+.stat-emoji {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+}
+
+.stat-text {
+  font-size: 13px;
+  color: #555;
+}
+
+.stat-text strong {
+  color: #e67e22;
+  font-weight: 700;
+}
+
+.detail-label {
+  font-size: 11px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.detail-row {
+  font-size: 12px;
+  color: #777;
+  padding: 2px 0;
+}
+
+.milestone-text {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, #fff3e0, #fff8e1);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #e67e22;
+  font-weight: 500;
+  text-align: center;
+}
+
+.card-footer {
+  padding: 8px 14px 10px;
+  text-align: center;
+}
+
+.card-footer-text {
+  font-size: 10px;
+  color: #ccc;
+}

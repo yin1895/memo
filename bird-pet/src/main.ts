@@ -33,6 +33,7 @@ import { DialogueEngine } from './features/dialogue-engine';
 import { DIALOGUE_ENTRIES } from './features/messages';
 import { SpecialDateManager } from './features/special-dates';
 import { GreetingManager } from './features/greeting';
+import { MemoryCardManager } from './features/memory-card';
 
 async function main() {
   try {
@@ -93,6 +94,9 @@ async function main() {
     const specialDates = new SpecialDateManager(bubble, dialogue, effects, storage);
     const greeting = new GreetingManager(bubble, dialogue, effects);
 
+    // ─── v1.0.0: 回忆卡片管理器 ───
+    const memoryCard = new MemoryCardManager(bus, memory, petOwner, daysSinceMet);
+
     // 点击宠物 → 对话引擎选取台词 + 粒子特效
     bus.on('pet:clicked', () => {
       bubble.say({ text: dialogue.getLine('click'), priority: 'normal' });
@@ -124,6 +128,12 @@ async function main() {
       if (line !== '啾啾！') {
         bubble.say({ text: line, priority: 'high', duration: 6000 });
       }
+    });
+
+    // 记忆系统里程碑 → 专属台词 + 特效（v1.0.0）
+    bus.on('memory:milestone', ({ message }) => {
+      bubble.say({ text: `🏆 ${message}`, priority: 'high', duration: 6000 });
+      effects.playConfetti();
     });
 
     const updater = new UpdateController({
@@ -219,6 +229,10 @@ async function main() {
       await specialDates.checkToday();
       // 问候在特殊日期之后 2 秒触发（避免重叠）
       setTimeout(() => greeting.checkGreeting(isFirstLaunchToday), 2000);
+      // v1.0.0: 首次启动展示回忆卡片（再延迟 3 秒，避免与问候/特殊日期重叠）
+      if (isFirstLaunchToday) {
+        setTimeout(() => memoryCard.showDailyCard(), 3000);
+      }
     }, 3000);
 
     // ─── 生命周期 ───
@@ -230,6 +244,7 @@ async function main() {
       systemMonitor.stop();
       contextAwareness.destroy();
       memory.stop();
+      memoryCard.dispose();
       await memory.save();
       await storage.save();
       await bubble.dispose();
