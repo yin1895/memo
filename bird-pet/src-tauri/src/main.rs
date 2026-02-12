@@ -4,7 +4,12 @@ use active_win_pos_rs::get_active_window;
 use serde::Serialize;
 use std::sync::Mutex;
 use sysinfo::System;
-use tauri::State;
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem},
+    tray::TrayIconBuilder,
+    Manager, State,
+};
+use tauri_plugin_autostart::MacosLauncher;
 
 /// 系统资源统计信息
 #[derive(Debug, Serialize)]
@@ -80,10 +85,62 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec![]),
+        ))
         .manage(SystemMonitor {
             system: Mutex::new(sys),
         })
         .invoke_handler(tauri::generate_handler![get_system_stats, get_active_window_info])
+        .setup(|app| {
+            // ─── 系统托盘 ───
+            let show_item = MenuItem::with_id(app, "show", "🐦 显示小鸟", true, None::<&str>)?;
+            let autostart_item = MenuItem::with_id(app, "autostart", "🚀 开机自启动", true, None::<&str>)?;
+            let sep = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(app, "quit", "⛔ 退出", true, None::<&str>)?;
+
+            let menu = Menu::with_items(app, &[
+                &show_item,
+                &autostart_item,
+                &sep,
+                &quit_item,
+            ])?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Bird Pet - 你的桌面小鸟")
+                .menu(&menu)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                    "autostart" => {
+                        // 通知前端切换自启动状态
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.emit("tray:toggle-autostart", ());
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let tauri::tray::TrayIconEvent::DoubleClick { .. } = event {
+                        if let Some(w) = tray.app_handle().get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
