@@ -44,7 +44,19 @@ export type DialogueScene =
   | 'reflective_sleep'
   | 'reflective_streak'
   | 'reflective_affinity'
-  | 'reflective_app_habit';
+  | 'reflective_app_habit'
+  // v0.5.0: 特殊日期场景
+  | 'special_birthday'
+  | 'special_valentine'
+  | 'special_christmas'
+  | 'special_newyear'
+  | 'special_520'
+  // v0.5.0: 时段问候场景
+  | 'greeting_morning'
+  | 'greeting_noon'
+  | 'greeting_evening'
+  | 'greeting_night'
+  | 'greeting_latenight';
 
 /** 对话条件（v0.4.0 扩展记忆相关字段） */
 export interface DialogueCondition {

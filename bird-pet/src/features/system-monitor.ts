@@ -6,6 +6,7 @@
  */
 import { invoke } from '@tauri-apps/api/core';
 import type { BubbleManager } from '../core/bubble-manager';
+import type { StorageService } from '../core/storage';
 
 /** Rust 端 get_system_stats 返回的数据结构 */
 interface SystemStats {
@@ -28,15 +29,21 @@ const FIRST_CHECK_DELAY = 15 * 1000;
 
 export class SystemMonitor {
   private bubble: BubbleManager;
+  private storage: StorageService | null;
   private timer: number | null = null;
   private lastAlertAt = 0;
 
-  constructor(bubble: BubbleManager) {
+  constructor(bubble: BubbleManager, storage?: StorageService) {
     this.bubble = bubble;
+    this.storage = storage ?? null;
   }
 
   /** 启动系统监控轮询 */
-  start(): void {
+  async start(): Promise<void> {
+    if (this.storage) {
+      const prefs = await this.storage.getPreferences();
+      if (!prefs.systemMonitorEnabled) return;
+    }
     // 首次延迟检查（让 Rust 端 CPU 基线稳定）
     setTimeout(() => {
       this.poll();

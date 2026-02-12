@@ -84,7 +84,7 @@ export class MemorySystem {
           data: { from, to },
         }),
       ),
-      this.bus.on('pomodoro:focus', () =>
+      this.bus.on('pomodoro:break', () =>
         this.recordEvent({ type: 'pomodoro_complete', timestamp: Date.now() }),
       ),
     );

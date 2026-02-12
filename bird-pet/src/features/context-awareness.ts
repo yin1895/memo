@@ -15,6 +15,7 @@ import type { EventBus } from '../events';
 import type { AppEvents } from '../types';
 import type { BubbleManager } from '../core/bubble-manager';
 import type { DialogueEngine, AppContext } from './dialogue-engine';
+import type { StorageService } from '../core/storage';
 
 /** 活跃窗口信息（来自 Rust 后端） */
 interface ActiveWindowInfo {
@@ -44,6 +45,7 @@ export class ContextAwareness {
   private bus: EventBus<AppEvents>;
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
+  private storage: StorageService | null;
 
   private timer: number | null = null;
   private _currentContext: AppContext = 'unknown';
@@ -58,14 +60,20 @@ export class ContextAwareness {
     bus: EventBus<AppEvents>,
     bubble: BubbleManager,
     dialogue: DialogueEngine,
+    storage?: StorageService,
   ) {
     this.bus = bus;
     this.bubble = bubble;
     this.dialogue = dialogue;
+    this.storage = storage ?? null;
   }
 
   /** 启动行为感知 */
-  start(): void {
+  async start(): Promise<void> {
+    if (this.storage) {
+      const prefs = await this.storage.getPreferences();
+      if (!prefs.contextAwarenessEnabled) return;
+    }
     // 立即执行一次检测
     this.poll();
     // 定时轮询
