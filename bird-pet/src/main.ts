@@ -103,7 +103,7 @@ async function main() {
     const greeting = new GreetingManager(bubble, dialogue, effects);
 
     // ─── v1.0.0: 回忆卡片管理器 ───
-    const memoryCard = new MemoryCardManager(bus, memory, petOwner, daysSinceMet);
+    const memoryCard = new MemoryCardManager(bus, memory, storage, petOwner, daysSinceMet);
 
     // ─── v1.0.0: 回忆面板管理器 ───
     const memoryPanel = new MemoryPanelManager(memory, petOwner, daysSinceMet);
@@ -216,16 +216,31 @@ async function main() {
 
     // ─── 交互初始化 ───
     const cleanupInteraction = setupInteraction({
-      canvas, app, animation, clickThrough, menu, bus,
+      canvas, app, animation, clickThrough, menu, bus, quietMode,
     });
 
-    // ─── v1.0.0: 窗口位置恢复 ───
+    // ─── v1.0.0: 窗口位置恢复（物理坐标系） ───
     const savedPos = await storage.getWindowPosition();
     if (savedPos) {
       try {
         const mainWindow = getCurrentWindow();
-        const { LogicalPosition } = await import('@tauri-apps/api/dpi');
-        await mainWindow.setPosition(new LogicalPosition(savedPos.x, savedPos.y));
+        const { PhysicalPosition } = await import('@tauri-apps/api/dpi');
+        const { availableMonitors } = await import('@tauri-apps/api/window');
+        // 边界检查：确保坐标在某个可见显示器范围内
+        const monitors = await availableMonitors();
+        const isVisible = monitors.some((m) => {
+          const mx = m.position.x;
+          const my = m.position.y;
+          const mw = m.size.width;
+          const mh = m.size.height;
+          return savedPos.x >= mx - 100 && savedPos.x < mx + mw
+            && savedPos.y >= my - 100 && savedPos.y < my + mh;
+        });
+        if (isVisible) {
+          await mainWindow.setPosition(new PhysicalPosition(savedPos.x, savedPos.y));
+        } else {
+          console.warn('保存的窗口位置超出可见区域，跳过恢复');
+        }
       } catch (e) {
         console.warn('恢复窗口位置失败:', e);
       }
@@ -244,8 +259,8 @@ async function main() {
       console.warn('自启动设置失败:', e);
     }
 
-    // 监听托盘菜单事件
-    listen('tray:toggle-autostart', async () => {
+    // 监听托盘菜单事件（保存 unlisten 函数，在 beforeunload 中释放）
+    const unlistenAutostart = listen('tray:toggle-autostart', async () => {
       try {
         const enabled = await isEnabled();
         if (enabled) {
@@ -261,7 +276,7 @@ async function main() {
     });
 
     // 监听托盘菜单"查看回忆"
-    listen('tray:open-memories', async () => {
+    const unlistenMemories = listen('tray:open-memories', async () => {
       try {
         await memoryPanel.showPanel();
       } catch (e) {
@@ -318,6 +333,9 @@ async function main() {
       } catch { /* ignore */ }
 
       clearInterval(autoSaveTimer);
+      // 释放托盘事件监听
+      (await unlistenAutostart)();
+      (await unlistenMemories)();
       cleanupInteraction();
       idleCare.stop();
       hourlyChime.stop();

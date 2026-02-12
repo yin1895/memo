@@ -36,17 +36,9 @@ export interface SpecialDate {
 /**
  * 特殊日期配置表
  *
- * ⚠️ 请根据实际情况修改日期！
+ * 固定节日硬编码，生日/纪念日在运行时从 PetOwnerProfile 动态生成。
  */
-const SPECIAL_DATES: SpecialDate[] = [
-  {
-    name: '生日',
-    month: 9,
-    day: 20,
-    scene: 'special_birthday',
-    effectType: 'confetti',
-    recurring: true,
-  },
+const FIXED_SPECIAL_DATES: SpecialDate[] = [
   {
     name: '情人节',
     month: 2,
@@ -79,14 +71,6 @@ const SPECIAL_DATES: SpecialDate[] = [
     effectType: 'hearts',
     recurring: true,
   },
-  {
-    name: '认识纪念日',
-    month: 1,
-    day: 20,
-    scene: 'special_anniversary',
-    effectType: 'hearts',
-    recurring: true,
-  },
 ];
 
 export class SpecialDateManager {
@@ -105,6 +89,50 @@ export class SpecialDateManager {
     this.dialogue = dialogue;
     this.effects = effects;
     this.storage = storage;
+  }
+
+  /**
+   * 从 PetOwnerProfile 动态构建完整特殊日期列表
+   * 固定节日 + 个性化日期（生日/纪念日）
+   */
+  private async buildSpecialDates(): Promise<SpecialDate[]> {
+    const dates = [...FIXED_SPECIAL_DATES];
+    try {
+      const owner = await this.storage.getPetOwner();
+
+      // 生日（格式 MM-DD）
+      if (owner.birthday) {
+        const [mm, dd] = owner.birthday.split('-').map(Number);
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          dates.push({
+            name: '生日',
+            month: mm,
+            day: dd,
+            scene: 'special_birthday',
+            effectType: 'confetti',
+            recurring: true,
+          });
+        }
+      }
+
+      // 认识纪念日（格式 YYYY-MM-DD）
+      if (owner.metDate) {
+        const parts = owner.metDate.split('-').map(Number);
+        if (parts.length === 3 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31) {
+          dates.push({
+            name: '认识纪念日',
+            month: parts[1],
+            day: parts[2],
+            scene: 'special_anniversary',
+            effectType: 'hearts',
+            recurring: true,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('读取主人信息失败，使用固定节日列表:', e);
+    }
+    return dates;
   }
 
   /**
@@ -128,8 +156,11 @@ export class SpecialDateManager {
     );
     if (lastTriggered === todayKey) return;
 
+    // 动态构建特殊日期列表（包含个性化日期）
+    const specialDates = await this.buildSpecialDates();
+
     // 匹配特殊日期
-    const match = SPECIAL_DATES.find((sd) => {
+    const match = specialDates.find((sd) => {
       if (sd.month !== month || sd.day !== day) return false;
       if (!sd.recurring && sd.year !== year) return false;
       return true;
@@ -156,7 +187,7 @@ export class SpecialDateManager {
     await this.storage.set(STORE_KEYS.SPECIAL_DATE_TRIGGERED, todayKey);
 
     // 倒计时预告（≤ 7 天）
-    const next = this.getDaysUntilNext();
+    const next = await this.getDaysUntilNext();
     if (next && next.days > 0 && next.days <= 7) {
       setTimeout(() => {
         const countdownLines = [
@@ -174,13 +205,15 @@ export class SpecialDateManager {
    * 获取距离最近一个特殊日期的天数
    * @returns 天数和日期名称，无特殊日期时返回 null
    */
-  getDaysUntilNext(): { days: number; name: string } | null {
+  async getDaysUntilNext(): Promise<{ days: number; name: string } | null> {
     const now = new Date();
     now.setHours(0, 0, 0, 0); // 归零到当天零点
     const year = now.getFullYear();
     let closest: { days: number; name: string } | null = null;
 
-    for (const sd of SPECIAL_DATES) {
+    const specialDates = await this.buildSpecialDates();
+
+    for (const sd of specialDates) {
       if (!sd.recurring) continue;
 
       let nextDate = new Date(year, sd.month - 1, sd.day);

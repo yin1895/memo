@@ -94,18 +94,18 @@ export class QuietModeManager {
     // 2. 会议静默
     if (this.inMeeting) return 'meeting';
 
-    // 3. 深夜降频（不完全屏蔽，但标记为 night_mode）
-    if (this.preferences?.nightModeEnabled) {
-      if (hour >= this.NIGHT_START || hour < this.NIGHT_END) {
-        return 'night_mode';
-      }
-    }
-
-    // 4. 专注保护（连续编码 >30min）
+    // 3. 专注保护（连续编码 >30min）—— 优先级高于被动时段判断
     if (this.codingStartTime > 0) {
       const codingDuration = Date.now() - this.codingStartTime;
       if (codingDuration > this.DEEP_FOCUS_THRESHOLD) {
         return 'deep_focus';
+      }
+    }
+
+    // 4. 深夜降频（不完全屏蔽，但标记为 night_mode）
+    if (this.preferences?.nightModeEnabled) {
+      if (hour >= this.NIGHT_START || hour < this.NIGHT_END) {
+        return 'night_mode';
       }
     }
 
