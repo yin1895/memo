@@ -96,12 +96,14 @@ fn main() {
         .setup(|app| {
             // ─── 系统托盘 ───
             let show_item = MenuItem::with_id(app, "show", "🐦 显示小鸟", true, None::<&str>)?;
+            let memories_item = MenuItem::with_id(app, "memories", "📖 查看回忆", true, None::<&str>)?;
             let autostart_item = MenuItem::with_id(app, "autostart", "🚀 开机自启动", true, None::<&str>)?;
             let sep = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "⛔ 退出", true, None::<&str>)?;
 
             let menu = Menu::with_items(app, &[
                 &show_item,
+                &memories_item,
                 &autostart_item,
                 &sep,
                 &quit_item,
@@ -116,6 +118,12 @@ fn main() {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
                             let _ = w.set_focus();
+                        }
+                    }
+                    "memories" => {
+                        // 通知前端打开回忆面板
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.emit("tray:open-memories", ());
                         }
                     }
                     "autostart" => {

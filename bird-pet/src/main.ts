@@ -37,6 +37,7 @@ import { DIALOGUE_ENTRIES } from './features/messages';
 import { SpecialDateManager } from './features/special-dates';
 import { GreetingManager } from './features/greeting';
 import { MemoryCardManager } from './features/memory-card';
+import { MemoryPanelManager } from './features/memory-panel';
 import { QuietModeManager } from './features/quiet-mode';
 
 async function main() {
@@ -103,6 +104,9 @@ async function main() {
 
     // ─── v1.0.0: 回忆卡片管理器 ───
     const memoryCard = new MemoryCardManager(bus, memory, petOwner, daysSinceMet);
+
+    // ─── v1.0.0: 回忆面板管理器 ───
+    const memoryPanel = new MemoryPanelManager(memory, petOwner, daysSinceMet);
 
     // 点击宠物 → 对话引擎选取台词 + 粒子特效
     bus.on('pet:clicked', () => {
@@ -256,6 +260,15 @@ async function main() {
       }
     });
 
+    // 监听托盘菜单"查看回忆"
+    listen('tray:open-memories', async () => {
+      try {
+        await memoryPanel.showPanel();
+      } catch (e) {
+        console.warn('打开回忆面板失败:', e);
+      }
+    });
+
     // ─── v1.0.0: 定时自动保存（每 5 分钟） ───
     const AUTO_SAVE_INTERVAL = 5 * 60 * 1000;
     const autoSaveTimer = window.setInterval(async () => {
@@ -314,6 +327,7 @@ async function main() {
       quietMode.stop();
       memory.stop();
       memoryCard.dispose();
+      memoryPanel.dispose();
       await memory.save();
       await storage.save();
       await bubble.dispose();
