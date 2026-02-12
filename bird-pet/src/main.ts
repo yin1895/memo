@@ -37,6 +37,7 @@ import { DIALOGUE_ENTRIES } from './features/messages';
 import { SpecialDateManager } from './features/special-dates';
 import { GreetingManager } from './features/greeting';
 import { MemoryCardManager } from './features/memory-card';
+import { QuietModeManager } from './features/quiet-mode';
 
 async function main() {
   try {
@@ -72,9 +73,9 @@ async function main() {
     // ─── v1.0.0: 加载主人信息并注入对话引擎 ───
     const petOwner = await storage.getPetOwner();
     const metDateObj = new Date(petOwner.metDate + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const daysSinceMet = Math.max(0, Math.floor((today.getTime() - metDateObj.getTime()) / (1000 * 60 * 60 * 24)));
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const daysSinceMet = Math.max(0, Math.floor((todayDate.getTime() - metDateObj.getTime()) / (1000 * 60 * 60 * 24)));
     dialogue.setGlobalVars({
       name: petOwner.name,
       nickname: petOwner.nicknames[0],
@@ -86,12 +87,15 @@ async function main() {
     // ─── v0.4.0: 记忆系统 ───
     const memory = new MemorySystem(bus, storage);
 
+    // ─── v1.0.0: 低打扰智能模式 ───
+    const quietMode = new QuietModeManager(bus, storage);
+
     // ─── 功能模块 ───
-    const idleCare = new IdleCareScheduler(bus, bubble, dialogue, memory);
-    const hourlyChime = new HourlyChime(bubble, dialogue, storage);
+    const idleCare = new IdleCareScheduler(bus, bubble, dialogue, memory, quietMode);
+    const hourlyChime = new HourlyChime(bubble, dialogue, storage, quietMode);
     const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue);
     const systemMonitor = new SystemMonitor(bubble, storage);
-    const contextAwareness = new ContextAwareness(bus, bubble, dialogue, storage);
+    const contextAwareness = new ContextAwareness(bus, bubble, dialogue, storage, quietMode);
 
     // ─── v0.5.0: 特殊日期 + 时段问候 ───
     const specialDates = new SpecialDateManager(bubble, dialogue, effects, storage);
@@ -266,6 +270,7 @@ async function main() {
     // ─── 启动动画 & 功能模块 ───
     animation.start();
     await memory.start(); // 记忆系统需优先启动（加载历史数据）
+    await quietMode.start(); // 低打扰模式需在功能模块之前启动
     idleCare.start();
     await hourlyChime.start();
     await systemMonitor.start();
@@ -306,6 +311,7 @@ async function main() {
       pomodoro.stop();
       systemMonitor.stop();
       contextAwareness.destroy();
+      quietMode.stop();
       memory.stop();
       memoryCard.dispose();
       await memory.save();

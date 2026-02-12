@@ -16,6 +16,7 @@ import type { AppEvents } from '../types';
 import type { BubbleManager } from '../core/bubble-manager';
 import type { DialogueEngine, AppContext } from './dialogue-engine';
 import type { StorageService } from '../core/storage';
+import type { QuietModeManager } from './quiet-mode';
 
 /** 活跃窗口信息（来自 Rust 后端） */
 interface ActiveWindowInfo {
@@ -46,6 +47,7 @@ export class ContextAwareness {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
   private storage: StorageService | null;
+  private quietMode: QuietModeManager | null;
 
   private timer: number | null = null;
   private _currentContext: AppContext = 'unknown';
@@ -61,11 +63,13 @@ export class ContextAwareness {
     bubble: BubbleManager,
     dialogue: DialogueEngine,
     storage?: StorageService,
+    quietMode?: QuietModeManager,
   ) {
     this.bus = bus;
     this.bubble = bubble;
     this.dialogue = dialogue;
     this.storage = storage ?? null;
+    this.quietMode = quietMode ?? null;
   }
 
   /** 启动行为感知 */
@@ -111,8 +115,9 @@ export class ContextAwareness {
         this.bus.emit('context:changed', { from: oldContext, to: newContext });
 
         // 冷却检查：距上次台词 ≥ 5 分钟才说话
+        // v1.0.0: 静默模式下跳过气泡（但上下文事件仍广播，供 QuietMode 追踪）
         const now = Date.now();
-        if (now - this.lastLineTime >= LINE_COOLDOWN) {
+        if (now - this.lastLineTime >= LINE_COOLDOWN && !this.quietMode?.isFullSilent()) {
           const line = this.dialogue.getContextLine(newContext);
           if (line) {
             this.bubble.say({ text: line, priority: 'low', duration: 4000 });

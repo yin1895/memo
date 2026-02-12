@@ -12,6 +12,7 @@ import type { EventBus } from '../events';
 import type { BubbleManager } from '../core/bubble-manager';
 import type { DialogueEngine, DialogueScene } from './dialogue-engine';
 import type { MemorySystem } from '../core/memory';
+import type { QuietModeManager } from './quiet-mode';
 
 /** 久坐提醒间隔（毫秒）= 30 分钟 */
 const SEDENTARY_INTERVAL = 30 * 60 * 1000;
@@ -21,6 +22,8 @@ const AFFIRMATION_INTERVAL = 2 * 60 * 60 * 1000;
 const AFFIRMATION_PROBABILITY = 0.6;
 /** 反思性对话概率（在正能量触发后） */
 const REFLECTIVE_PROBABILITY = 0.5;
+/** 深夜降频后的正能量概率 */
+const NIGHT_AFFIRMATION_PROBABILITY = 0.15;
 
 /** 反思性对话场景列表 */
 const REFLECTIVE_SCENES: DialogueScene[] = [
@@ -35,21 +38,26 @@ export class IdleCareScheduler {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
   private memory: MemorySystem;
+  private quietMode: QuietModeManager | null;
 
   private sedentaryTimer: number | null = null;
   private affirmationTimer: number | null = null;
   private lastActivity = Date.now();
+  /** 深夜关怀：每晚最多触发一次 */
+  private deepNightCaredTonight = false;
 
   constructor(
     bus: EventBus<AppEvents>,
     bubble: BubbleManager,
     dialogue: DialogueEngine,
     memory: MemorySystem,
+    quietMode?: QuietModeManager,
   ) {
     this.bus = bus;
     this.bubble = bubble;
     this.dialogue = dialogue;
     this.memory = memory;
+    this.quietMode = quietMode ?? null;
   }
 
   /** 启动调度 */
@@ -61,6 +69,9 @@ export class IdleCareScheduler {
 
     // 久坐提醒定时器
     this.sedentaryTimer = window.setInterval(() => {
+      // 完全静默时跳过久坐提醒
+      if (this.quietMode?.isFullSilent()) return;
+
       const elapsed = Date.now() - this.lastActivity;
       if (elapsed >= SEDENTARY_INTERVAL) {
         this.bubble.say({
@@ -75,9 +86,36 @@ export class IdleCareScheduler {
 
     // 正能量 / 反思性对话定时器
     this.affirmationTimer = window.setInterval(() => {
-      if (Math.random() < AFFIRMATION_PROBABILITY) {
+      // 完全静默时跳过
+      if (this.quietMode?.isFullSilent()) return;
+
+      // 深夜模式：降低触发概率
+      const probability = this.quietMode?.isNightMode()
+        ? NIGHT_AFFIRMATION_PROBABILITY
+        : AFFIRMATION_PROBABILITY;
+
+      // 深夜关怀：午夜后用户仍在线，发一次温柔提醒
+      if (this.quietMode?.isNightMode()) {
+        const hour = new Date().getHours();
+        if (hour >= 0 && hour < 5 && !this.deepNightCaredTonight) {
+          this.deepNightCaredTonight = true;
+          this.bubble.say({
+            text: this.dialogue.getLine('greeting_latenight'),
+            priority: 'normal',
+            duration: 6000,
+          });
+          return;
+        }
+      } else {
+        // 不在深夜，重置标记（为下次午夜准备）
+        this.deepNightCaredTonight = false;
+      }
+
+      // 专注保护时完全跳过
+      if (this.quietMode?.shouldSuppress() === 'deep_focus') return;
+
+      if (Math.random() < probability) {
         if (Math.random() < REFLECTIVE_PROBABILITY) {
-          // 尝试触发反思性对话
           this.tryReflectiveDialogue();
         } else {
           this.bubble.say({
