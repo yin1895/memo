@@ -27,6 +27,7 @@ serde_json = "1"
 sysinfo = "0.32"
 active-win-pos-rs = "0.9"
 tauri-plugin-store = "2"
+tauri-plugin-autostart = { version = "2", features = ["lazy"] }
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-global-shortcut = "2"
 

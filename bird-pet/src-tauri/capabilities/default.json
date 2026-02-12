@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capability for BirdPet",
-  "windows": ["main", "bubble"],
+  "windows": ["main", "bubble", "memory-card"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -14,7 +14,11 @@
     "core:window:allow-outer-position",
     "core:window:allow-outer-size",
     "core:window:allow-scale-factor",
+    "core:window:allow-set-focus",
     "core:webview:allow-create-webview-window",
+    "core:event:allow-emit-to",
+    "core:event:allow-listen",
+    "core:tray:default",
     "process:allow-exit",
     "process:allow-restart",
 
@@ -26,6 +30,9 @@
     "updater:allow-check",
     "updater:allow-download-and-install",
 
-    "store:default"
+    "store:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }

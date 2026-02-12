@@ -12,6 +12,9 @@
 import './style.css';
 import { unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { exit } from '@tauri-apps/plugin-process';
+import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { listen } from '@tauri-apps/api/event';
 import { EventBus } from './events';
 import type { AppEvents } from './types';
 import { initHint, showHint, getLocalDateKey } from './utils';
@@ -208,6 +211,58 @@ async function main() {
       canvas, app, animation, clickThrough, menu, bus,
     });
 
+    // ─── v1.0.0: 窗口位置恢复 ───
+    const savedPos = await storage.getWindowPosition();
+    if (savedPos) {
+      try {
+        const mainWindow = getCurrentWindow();
+        const { LogicalPosition } = await import('@tauri-apps/api/dpi');
+        await mainWindow.setPosition(new LogicalPosition(savedPos.x, savedPos.y));
+      } catch (e) {
+        console.warn('恢复窗口位置失败:', e);
+      }
+    }
+
+    // ─── v1.0.0: 开机自启动初始化 ───
+    const prefs = await storage.getPreferences();
+    try {
+      const autoStartEnabled = await isEnabled();
+      if (prefs.autoStartEnabled && !autoStartEnabled) {
+        await enable();
+      } else if (!prefs.autoStartEnabled && autoStartEnabled) {
+        await disable();
+      }
+    } catch (e) {
+      console.warn('自启动设置失败:', e);
+    }
+
+    // 监听托盘菜单事件
+    listen('tray:toggle-autostart', async () => {
+      try {
+        const enabled = await isEnabled();
+        if (enabled) {
+          await disable();
+          await storage.setPreferences({ autoStartEnabled: false });
+        } else {
+          await enable();
+          await storage.setPreferences({ autoStartEnabled: true });
+        }
+      } catch (e) {
+        console.warn('切换自启动失败:', e);
+      }
+    });
+
+    // ─── v1.0.0: 定时自动保存（每 5 分钟） ───
+    const AUTO_SAVE_INTERVAL = 5 * 60 * 1000;
+    const autoSaveTimer = window.setInterval(async () => {
+      try {
+        await memory.save();
+        await storage.save();
+      } catch (e) {
+        console.warn('自动保存失败:', e);
+      }
+    }, AUTO_SAVE_INTERVAL);
+
     // ─── 启动动画 & 功能模块 ───
     animation.start();
     await memory.start(); // 记忆系统需优先启动（加载历史数据）
@@ -237,6 +292,14 @@ async function main() {
 
     // ─── 生命周期 ───
     window.addEventListener('beforeunload', async () => {
+      // 保存窗口位置
+      try {
+        const mainWindow = getCurrentWindow();
+        const pos = await mainWindow.outerPosition();
+        await storage.setWindowPosition({ x: pos.x, y: pos.y });
+      } catch { /* ignore */ }
+
+      clearInterval(autoSaveTimer);
       cleanupInteraction();
       idleCare.stop();
       hourlyChime.stop();
