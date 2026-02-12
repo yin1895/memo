@@ -79,6 +79,14 @@ const SPECIAL_DATES: SpecialDate[] = [
     effectType: 'hearts',
     recurring: true,
   },
+  {
+    name: '认识纪念日',
+    month: 1,
+    day: 20,
+    scene: 'special_anniversary',
+    effectType: 'hearts',
+    recurring: true,
+  },
 ];
 
 export class SpecialDateManager {

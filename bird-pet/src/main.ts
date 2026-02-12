@@ -65,6 +65,20 @@ async function main() {
     const dialogue = new DialogueEngine(DIALOGUE_ENTRIES);
     const effects = new EffectsManager();
 
+    // ─── v1.0.0: 加载主人信息并注入对话引擎 ───
+    const petOwner = await storage.getPetOwner();
+    const metDateObj = new Date(petOwner.metDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysSinceMet = Math.max(0, Math.floor((today.getTime() - metDateObj.getTime()) / (1000 * 60 * 60 * 24)));
+    dialogue.setGlobalVars({
+      name: petOwner.name,
+      nickname: petOwner.nicknames[0],
+      nicknames: petOwner.nicknames,
+      metDate: petOwner.metDate,
+      daysSinceMet,
+    });
+
     // ─── v0.4.0: 记忆系统 ───
     const memory = new MemorySystem(bus, storage);
 
