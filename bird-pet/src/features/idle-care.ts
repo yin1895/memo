@@ -45,6 +45,8 @@ export class IdleCareScheduler {
   private lastActivity = Date.now();
   /** 深夜关怀：每晚最多触发一次 */
   private deepNightCaredTonight = false;
+  /** 事件取消订阅列表 */
+  private unsubscribers: (() => void)[] = [];
 
   constructor(
     bus: EventBus<AppEvents>,
@@ -63,9 +65,11 @@ export class IdleCareScheduler {
   /** 启动调度 */
   start(): void {
     // 监听用户活动事件，重置计时
-    this.bus.on('pet:clicked', () => this.recordActivity());
-    this.bus.on('pet:dragged', () => this.recordActivity());
-    this.bus.on('menu:opened', () => this.recordActivity());
+    this.unsubscribers.push(
+      this.bus.on('pet:clicked', () => this.recordActivity()),
+      this.bus.on('pet:dragged', () => this.recordActivity()),
+      this.bus.on('menu:opened', () => this.recordActivity()),
+    );
 
     // 久坐提醒定时器
     this.sedentaryTimer = window.setInterval(() => {
@@ -138,6 +142,9 @@ export class IdleCareScheduler {
       clearInterval(this.affirmationTimer);
       this.affirmationTimer = null;
     }
+    // 解除事件监听，防止内存泄漏
+    for (const unsub of this.unsubscribers) unsub();
+    this.unsubscribers = [];
   }
 
   private recordActivity(): void {
