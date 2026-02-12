@@ -5,6 +5,7 @@
  * 持久化到本地文件（pet-state.json），跨重启保留。
  */
 import { LazyStore } from '@tauri-apps/plugin-store';
+import { getLocalDateKey } from '../utils';
 
 /** 存储文件名 */
 const STORE_FILE = 'pet-state.json';
@@ -85,7 +86,7 @@ export class StorageService {
 
   /** 记录今日活跃 */
   async recordActivity(): Promise<void> {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateKey();
     await this.set(STORE_KEYS.LAST_ACTIVE_DATE, today);
   }
 

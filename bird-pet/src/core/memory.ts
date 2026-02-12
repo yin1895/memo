@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import type { AppContext } from '../features/dialogue-engine';
 import { StorageService, STORE_KEYS } from './storage';
+import { getLocalDateKey } from '../utils';
 
 /** 滚动窗口天数 */
 const ROLLING_WINDOW_DAYS = 7;
@@ -262,7 +263,7 @@ export class MemorySystem {
    * 更新连续天数，然后标记今天为活跃日。
    */
   private summarizeDay(): void {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getLocalDateKey();
 
     if (this.profile.lastActiveDate === today) return; // 今天已汇总
 
@@ -271,7 +272,7 @@ export class MemorySystem {
     if (yesterday) {
       // 汇总昨日事件
       const yesterdayEvents = this.events.filter((e) => {
-        const d = new Date(e.timestamp).toISOString().slice(0, 10);
+        const d = getLocalDateKey(new Date(e.timestamp));
         return d === yesterday;
       });
 

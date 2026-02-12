@@ -13,6 +13,7 @@ import type { DialogueEngine, DialogueScene } from './dialogue-engine';
 import type { EffectsManager } from '../core/effects';
 import type { StorageService } from '../core/storage';
 import { STORE_KEYS } from '../core/storage';
+import { getLocalDateKey } from '../utils';
 
 /** 特殊日期定义 */
 export interface SpecialDate {
@@ -110,7 +111,7 @@ export class SpecialDateManager {
     const month = now.getMonth() + 1;
     const day = now.getDate();
     const year = now.getFullYear();
-    const todayKey = `${year}-${month}-${day}`;
+    const todayKey = getLocalDateKey(now);
 
     // 检查是否已触发
     const lastTriggered = await this.storage.get<string>(

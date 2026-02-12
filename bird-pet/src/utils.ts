@@ -15,6 +15,21 @@ export function showHint(text: string, ms: number = CONFIG.HINT_DURATION): void 
   window.setTimeout(() => hintEl?.classList.add('hidden'), ms);
 }
 
+/**
+ * 获取本地时区日期 key
+ *
+ * 返回格式：YYYY-MM-DD（零填充，本地时区）。
+ * 用于所有"按用户视角的自然天"做判断的场景（首次启动、活跃记录、特殊日期等）。
+ *
+ * @param date - 可选，默认当前时间
+ */
+export function getLocalDateKey(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /** 异步加载图片，返回 Promise */
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
