@@ -15,6 +15,7 @@ export default defineConfig(async () => ({
       input: {
         main: resolve(__dirname, 'index.html'),
         bubble: resolve(__dirname, 'bubble.html'),
+        'memory-card': resolve(__dirname, 'memory-card.html'),
       },
     },
   },
