@@ -11,6 +11,7 @@ import type { StorageService, UserPreferences } from '../src/core/storage';
 function mockStorage(prefs: Partial<UserPreferences> = {}): StorageService {
   const defaults: UserPreferences = {
     hourlyChimeEnabled: true,
+    systemMonitorEnabled: true,
     contextAwarenessEnabled: true,
     quietHoursStart: -1,
     quietHoursEnd: -1,
