@@ -73,18 +73,21 @@ export class BubbleManager {
       this.bubbleWin!.once('tauri://error', (e) => reject(e));
     });
 
-    // 等待气泡窗口内部脚本就绪（带超时保护）
-    await Promise.race([
-      readyPromise,
-      new Promise<void>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('bubble:ready timeout — 气泡窗口未在规定时间内就绪')),
-          BubbleManager.READY_TIMEOUT,
+    try {
+      // 等待气泡窗口内部脚本就绪（带超时保护）
+      await Promise.race([
+        readyPromise,
+        new Promise<void>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('bubble:ready timeout — 气泡窗口未在规定时间内就绪')),
+            BubbleManager.READY_TIMEOUT,
+          ),
         ),
-      ),
-    ]);
-    // 就绪后释放监听器
-    readyUnsub?.();
+      ]);
+    } finally {
+      // 无论成功/超时/异常，都释放 ready 监听器
+      readyUnsub?.();
+    }
 
     // 监听主窗口移动，同步气泡位置
     this.moveUnlisten = await this.mainWin.onMoved(() => {

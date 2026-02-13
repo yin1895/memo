@@ -87,12 +87,20 @@ export class MemoryCardManager {
       };
 
       // 创建或获取卡片窗口
-      await this.ensureCardWindow();
+      // 先注册 ready 监听，再创建窗口，消除 emit 先于 listen 的竞态
+      // （参照 BubbleManager.init() 正确模式）
+
+      // 释放旧的 ready 监听（防止重复调用 showDailyCard 时泄漏）
+      if (this.unlistenReady) {
+        this.unlistenReady();
+        this.unlistenReady = null;
+      }
 
       // 等待子窗口发射 ready 事件后再发送数据
       await new Promise<void>((resolve, reject) => {
         const READY_TIMEOUT = 5000;
         let settled = false;
+        let readyUnsub: (() => void) | null = null;
 
         const timeout = setTimeout(() => {
           if (!settled) {
@@ -103,6 +111,7 @@ export class MemoryCardManager {
           }
         }, READY_TIMEOUT);
 
+        // 先注册监听
         listen('memory-card:ready', async () => {
           if (settled) return;
           settled = true;
@@ -114,8 +123,24 @@ export class MemoryCardManager {
             reject(e);
           }
         }).then((unlisten) => {
+          readyUnsub = unlisten;
           // 保存 unlisten，在 dispose 中释放
           this.unlistenReady = unlisten;
+          // 若在 .then() 执行前已 settle，立即释放
+          if (settled) {
+            unlisten();
+            this.unlistenReady = null;
+          }
+        });
+
+        // 再创建窗口（确保 listen 先于子窗口 emit）
+        this.ensureCardWindow().catch((e) => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(timeout);
+            readyUnsub?.();
+            reject(e);
+          }
         });
       });
     } catch (e) {

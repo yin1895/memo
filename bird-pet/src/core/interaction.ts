@@ -18,6 +18,8 @@ export interface InteractionDeps {
   menu: MenuController;
   bus: EventBus<AppEvents>;
   quietMode?: QuietModeManager;
+  /** 统一退出回调（包含 gracefulShutdown + exit） */
+  onQuit?: () => Promise<void>;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface InteractionDeps {
  * @returns 清理函数（用于 beforeunload 等场景）
  */
 export function setupInteraction(deps: InteractionDeps): () => void {
-  const { canvas, app, animation, clickThrough, menu, bus, quietMode } = deps;
+  const { canvas, app, animation, clickThrough, menu, bus, quietMode, onQuit } = deps;
   const win = getCurrentWindow();
 
   let timer: number | null = null;
@@ -105,7 +107,7 @@ export function setupInteraction(deps: InteractionDeps): () => void {
   }, CONFIG.AUTO_ACTION_INTERVAL);
 
   // ─── 全局快捷键 ───
-  const shortcutsReady = setupShortcuts(clickThrough);
+  const shortcutsReady = setupShortcuts(clickThrough, onQuit);
 
   // ─── 清理 ───
   return () => {
@@ -120,10 +122,14 @@ export function setupInteraction(deps: InteractionDeps): () => void {
   };
 }
 
-async function setupShortcuts(clickThrough: ClickThroughManager): Promise<void> {
+async function setupShortcuts(clickThrough: ClickThroughManager, onQuit?: () => Promise<void>): Promise<void> {
   await register('CommandOrControl+Shift+P', () => clickThrough.toggle());
   await register('CommandOrControl+Shift+Q', async () => {
-    await unregisterAll();
-    await exit(0);
+    if (onQuit) {
+      await onQuit();
+    } else {
+      await unregisterAll();
+      await exit(0);
+    }
   });
 }

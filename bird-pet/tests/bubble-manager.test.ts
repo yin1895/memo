@@ -108,7 +108,7 @@ describe('BubbleManager', () => {
     expect(mockUnlisten).toHaveBeenCalled();
   });
 
-  it('气泡就绪超时应 reject 而非永久挂起', async () => {
+  it('气泡就绪超时应 reject 而非永久挂起，且 unlisten 仍会被释放', async () => {
     const manager = new BubbleManager();
     const initPromise = manager.init();
 
@@ -122,6 +122,9 @@ describe('BubbleManager', () => {
     await vi.advanceTimersByTimeAsync(BubbleManager.READY_TIMEOUT + 100);
 
     await expectation;
+
+    // 即使超时，unlisten 也应被 finally 块调用释放
+    expect(mockUnlisten).toHaveBeenCalled();
   }, 15_000);
 
   it('窗口创建失败应 reject', async () => {

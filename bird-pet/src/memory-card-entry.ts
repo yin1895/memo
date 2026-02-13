@@ -6,7 +6,7 @@
  * 自动 8 秒后渐隐关闭，或可点击关闭按钮。
  */
 import './memory-card.css';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 /** 回忆卡片数据 */
@@ -111,5 +111,5 @@ listen<MemoryCardData>('memory-card:show', (event) => {
   renderCard(event.payload);
 });
 
-// 通知主窗口已就绪
-getCurrentWindow().emit('memory-card:ready');
+// 通知主窗口已就绪（使用全局 emit，确保主窗口的全局 listen 能接收到）
+emit('memory-card:ready');

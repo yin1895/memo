@@ -83,6 +83,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 
 export class StorageService {
   private store: LazyStore;
+  /** incrementInteraction 串行化链，避免并发覆盖写 */
+  private _interactionLock: Promise<number> = Promise.resolve(0);
 
   constructor() {
     this.store = new LazyStore(STORE_FILE);
@@ -115,11 +117,22 @@ export class StorageService {
     return this.get(STORE_KEYS.INTERACTION_COUNT, 0);
   }
 
-  /** 递增交互次数 */
+  /** 递增交互次数（串行化，避免并发覆盖写） */
   async incrementInteraction(): Promise<number> {
-    const count = (await this.getInteractionCount()) + 1;
-    await this.set(STORE_KEYS.INTERACTION_COUNT, count);
-    return count;
+    const result = this._interactionLock = this._interactionLock.then(
+      async () => {
+        const count = (await this.getInteractionCount()) + 1;
+        await this.set(STORE_KEYS.INTERACTION_COUNT, count);
+        return count;
+      },
+      async () => {
+        // 前一个链失败不影响后续
+        const count = (await this.getInteractionCount()) + 1;
+        await this.set(STORE_KEYS.INTERACTION_COUNT, count);
+        return count;
+      },
+    );
+    return result;
   }
 
   /** 记录今日活跃 */

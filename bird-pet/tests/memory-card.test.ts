@@ -3,7 +3,7 @@
  *
  * 验证修复后的降序遍历逻辑：高活跃用户应优先收到最高阶里程碑。
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryCardManager } from '../src/features/memory-card';
 import type { EventBus } from '../src/events';
 import type { AppEvents, MemorySnapshot, UserProfile } from '../src/types';
@@ -14,9 +14,16 @@ import type { PetOwnerProfile, StorageService } from '../src/core/storage';
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   WebviewWindow: vi.fn(),
 }));
+
+const mockUnlisten = vi.fn();
+let listenCallbacks: Record<string, (event: unknown) => void> = {};
+
 vi.mock('@tauri-apps/api/event', () => ({
-  emitTo: vi.fn(),
-  listen: vi.fn(),
+  emitTo: vi.fn().mockResolvedValue(undefined),
+  listen: vi.fn(async (event: string, cb: (event: unknown) => void) => {
+    listenCallbacks[event] = cb;
+    return mockUnlisten;
+  }),
 }));
 
 /** 构建测试用 MemoryCardManager */
@@ -138,5 +145,33 @@ describe('MemoryCardManager - milestone detection', () => {
     const { manager, snapshot, profile, storage } = createManager({ streak: 50 });
     await (manager as any).detectMilestone(snapshot, profile);
     expect(storage.addTriggeredMilestone).toHaveBeenCalledWith('streak:50');
+  });
+});
+
+describe('MemoryCardManager - dispose & listener cleanup', () => {
+  beforeEach(() => {
+    listenCallbacks = {};
+    mockUnlisten.mockClear();
+  });
+
+  it('dispose 应释放 unlistenReady 并置空', () => {
+    const { manager } = createManager({});
+    // 模拟已注册过监听
+    (manager as any).unlistenReady = mockUnlisten;
+
+    manager.dispose();
+
+    expect(mockUnlisten).toHaveBeenCalledOnce();
+    expect((manager as any).unlistenReady).toBeNull();
+  });
+
+  it('多次 dispose 不应重复调用 unlisten', () => {
+    const { manager } = createManager({});
+    (manager as any).unlistenReady = mockUnlisten;
+
+    manager.dispose();
+    manager.dispose();
+
+    expect(mockUnlisten).toHaveBeenCalledOnce();
   });
 });

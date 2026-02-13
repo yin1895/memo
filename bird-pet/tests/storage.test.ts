@@ -156,5 +156,21 @@ describe('StorageService', () => {
       const c2 = await storage.incrementInteraction();
       expect(c2).toBe(2);
     });
+
+    it('incrementInteraction 并发调用不丢计数（串行化验证）', async () => {
+      // 同时发起 10 次 incrementInteraction，不 await
+      const promises: Promise<number>[] = [];
+      for (let i = 0; i < 10; i++) {
+        promises.push(storage.incrementInteraction());
+      }
+      const results = await Promise.all(promises);
+
+      // 每次调用应返回递增的唯一值
+      expect(results).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+      // 最终存储中的值应为 10
+      const finalCount = await storage.getInteractionCount();
+      expect(finalCount).toBe(10);
+    });
   });
 });

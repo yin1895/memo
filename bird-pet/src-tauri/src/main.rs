@@ -10,6 +10,7 @@ use tauri::{
     Emitter, Manager, State,
 };
 use tauri_plugin_autostart::MacosLauncher;
+use std::time::Duration;
 
 /// 系统资源统计信息
 #[derive(Debug, Serialize)]
@@ -136,12 +137,16 @@ fn main() {
                         }
                     }
                     "quit" => {
-                        // 优雅关闭：先销毁 WebView 窗口再退出，
-                        // 减少 Windows WebView2 的 "Failed to unregister class" 警告
+                        // 通知前端执行统一清理后退出
                         if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.destroy();
+                            let _ = w.emit("app:request-quit", ());
                         }
-                        app.exit(0);
+                        // 安全超时兜底：若前端未响应则 3 秒后强制退出
+                        let handle = app.clone();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(Duration::from_secs(3));
+                            handle.exit(0);
+                        });
                     }
                     _ => {}
                 })

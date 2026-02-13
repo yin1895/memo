@@ -14,7 +14,7 @@ import { unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { exit } from '@tauri-apps/plugin-process';
 import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { EventBus } from './events';
 import type { AppEvents } from './types';
 import { initHint, showHint, getLocalDateKey } from './utils';
@@ -206,7 +206,7 @@ async function main() {
       },
       {
         type: 'command', id: 'quit', label: '⛔ 退出',
-        handler: async () => { await unregisterAll(); await exit(0); },
+        handler: async () => { await gracefulShutdown(); await exit(0); },
       },
     ];
     menu.setItems(menuItems);
@@ -217,6 +217,7 @@ async function main() {
     // ─── 交互初始化 ───
     const cleanupInteraction = setupInteraction({
       canvas, app, animation, clickThrough, menu, bus, quietMode,
+      onQuit: async () => { await gracefulShutdown(); await exit(0); },
     });
 
     // ─── v1.0.0: 窗口位置恢复（物理坐标系） ───
@@ -295,6 +296,47 @@ async function main() {
       }
     }, AUTO_SAVE_INTERVAL);
 
+    // ─── 统一清理函数（所有退出路径共用） ───
+    let shutdownCalled = false;
+    async function gracefulShutdown(): Promise<void> {
+      if (shutdownCalled) return;
+      shutdownCalled = true;
+
+      // 保存窗口位置
+      try {
+        const mainWindow = getCurrentWindow();
+        const pos = await mainWindow.outerPosition();
+        await storage.setWindowPosition({ x: pos.x, y: pos.y });
+      } catch { /* ignore */ }
+
+      clearInterval(autoSaveTimer);
+      // 释放托盘事件监听
+      (await unlistenAutostart)();
+      (await unlistenMemories)();
+      (await unlistenRequestQuit)();
+      cleanupInteraction();
+      idleCare.stop();
+      hourlyChime.stop();
+      pomodoro.stop();
+      systemMonitor.stop();
+      contextAwareness.destroy();
+      quietMode.stop();
+      memory.stop();
+      memoryCard.dispose();
+      memoryPanel.dispose();
+      await memory.save();
+      await storage.save();
+      await bubble.dispose();
+      bus.dispose();
+      await unregisterAll();
+    }
+
+    // ─── 监听 Rust 端托盘退出请求 ───
+    const unlistenRequestQuit = listen('app:request-quit', async () => {
+      await gracefulShutdown();
+      await exit(0);
+    });
+
     // ─── 启动动画 & 功能模块 ───
     animation.start();
     await memory.start(); // 记忆系统需优先启动（加载历史数据）
@@ -323,34 +365,12 @@ async function main() {
       }
     }, 3000);
 
-    // ─── 生命周期 ───
-    window.addEventListener('beforeunload', async () => {
-      // 保存窗口位置
-      try {
-        const mainWindow = getCurrentWindow();
-        const pos = await mainWindow.outerPosition();
-        await storage.setWindowPosition({ x: pos.x, y: pos.y });
-      } catch { /* ignore */ }
-
-      clearInterval(autoSaveTimer);
-      // 释放托盘事件监听
-      (await unlistenAutostart)();
-      (await unlistenMemories)();
-      cleanupInteraction();
-      idleCare.stop();
-      hourlyChime.stop();
-      pomodoro.stop();
-      systemMonitor.stop();
-      contextAwareness.destroy();
-      quietMode.stop();
-      memory.stop();
-      memoryCard.dispose();
-      memoryPanel.dispose();
-      await memory.save();
-      await storage.save();
-      await bubble.dispose();
-      bus.dispose();
-      await unregisterAll();
+    // ─── 生命周期（兜底：窗口被直接关闭时尝试清理） ───
+    window.addEventListener('beforeunload', () => {
+      // beforeunload 是同步的，无法 await 异步操作
+      // 核心保存已由 gracefulShutdown() 在各退出路径中完成
+      // 此处仅做同步清理兜底
+      gracefulShutdown();
     });
 
     // 静默检查更新（2 秒后，不阻塞主流程）
