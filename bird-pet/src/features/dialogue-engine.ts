@@ -148,7 +148,10 @@ export class DialogueEngine {
     // 筛选匹配该场景的条目
     const candidates = this.entries.filter((e) => {
       if (e.scene !== scene) return false;
-      if (!e.conditions || !ctx) return true;
+      // 无条件条目始终匹配
+      if (!e.conditions) return true;
+      // 有条件但调用方未传上下文 → 排除，防止条件约束被悄悄绕过
+      if (!ctx) return false;
       return this.matchConditions(e.conditions, ctx);
     });
 

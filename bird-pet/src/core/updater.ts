@@ -27,6 +27,7 @@ type Update = NonNullable<Awaited<ReturnType<typeof check>>>;
  */
 export class UpdateController {
   private el: UpdateElements;
+  private currentCleanup: (() => void) | null = null;
 
   constructor(el: UpdateElements) {
     this.el = el;
@@ -91,11 +92,16 @@ export class UpdateController {
   }
 
   private bindButtons(update: Update): void {
+    // 清除前一次绑定，防止回调叠加
+    this.currentCleanup?.();
+
     const cleanup = () => {
       this.el.btnNow.removeEventListener('click', onNow);
       this.el.btnLater.removeEventListener('click', onLater);
       this.el.btnSkip.removeEventListener('click', onSkip);
+      this.currentCleanup = null;
     };
+    this.currentCleanup = cleanup;
 
     const onNow = async () => {
       this.el.btnNow.disabled = true;
@@ -128,9 +134,11 @@ export class UpdateController {
         this.el.btnNow.addEventListener('click', () => relaunch(), { once: true });
       } catch (err) {
         console.error('更新下载失败:', err);
+        cleanup();
         this.el.btnNow.textContent = '下载失败';
         this.el.btnLater.style.display = '';
         this.el.btnLater.textContent = '关闭';
+        this.el.btnLater.addEventListener('click', () => this.hideDialog(), { once: true });
         showHint('更新下载失败', 2000);
       }
     };
