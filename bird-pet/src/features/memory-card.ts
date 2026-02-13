@@ -132,8 +132,8 @@ export class MemoryCardManager {
   ): Promise<{ kind: string; value: number; message: string } | null> {
     const triggered = await this.storage.getTriggeredMilestones();
 
-    // 连续天数里程碑
-    for (const threshold of STREAK_MILESTONES) {
+    // 连续天数里程碑（降序遍历，优先返回最高阶里程碑）
+    for (const threshold of [...STREAK_MILESTONES].reverse()) {
       const key = `streak:${threshold}`;
       if (snapshot.streak >= threshold && !triggered.includes(key)) {
         await this.storage.addTriggeredMilestone(key);
@@ -145,8 +145,8 @@ export class MemoryCardManager {
       }
     }
 
-    // 交互次数里程碑
-    for (const threshold of INTERACTION_MILESTONES) {
+    // 交互次数里程碑（降序遍历，优先返回最高阶里程碑）
+    for (const threshold of [...INTERACTION_MILESTONES].reverse()) {
       const key = `interaction:${threshold}`;
       if (profile.totalInteractions >= threshold && !triggered.includes(key)) {
         await this.storage.addTriggeredMilestone(key);
@@ -158,9 +158,9 @@ export class MemoryCardManager {
       }
     }
 
-    // 认识天数里程碑
+    // 认识天数里程碑（降序遍历，优先返回最高阶里程碑）
     const metMilestones = [30, 50, 100, 200, 365];
-    for (const threshold of metMilestones) {
+    for (const threshold of [...metMilestones].reverse()) {
       const key = `met_days:${threshold}`;
       if (this.daysSinceMet >= threshold && !triggered.includes(key)) {
         await this.storage.addTriggeredMilestone(key);

@@ -37,8 +37,6 @@ export class QuietModeManager {
   /** 深夜时段 */
   private readonly NIGHT_START = 23;
   private readonly NIGHT_END = 6;
-  /** 深夜降频概率倍数 */
-  readonly NIGHT_ACTION_PROBABILITY = 0.10;
   /** 专注保护阈值（ms）：30 分钟 */
   private readonly DEEP_FOCUS_THRESHOLD = 30 * 60 * 1000;
 
@@ -127,10 +125,5 @@ export class QuietModeManager {
   isFullSilent(): boolean {
     const reason = this.shouldSuppress();
     return reason === 'quiet_hours' || reason === 'meeting';
-  }
-
-  /** 刷新偏好设置 */
-  async refreshPreferences(): Promise<void> {
-    this.preferences = await this.storage.getPreferences();
   }
 }
