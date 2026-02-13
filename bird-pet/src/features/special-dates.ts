@@ -73,6 +73,16 @@ const FIXED_SPECIAL_DATES: SpecialDate[] = [
   },
 ];
 
+/**
+ * 校验月-日组合是否为合法日期
+ * 使用闰年 2000 作为基准，允许 2/29 作为合法生日/纪念日
+ */
+export function isValidDate(month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const d = new Date(2000, month - 1, day);
+  return d.getMonth() === month - 1 && d.getDate() === day;
+}
+
 export class SpecialDateManager {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
@@ -103,7 +113,7 @@ export class SpecialDateManager {
       // 生日（格式 MM-DD）
       if (owner.birthday) {
         const [mm, dd] = owner.birthday.split('-').map(Number);
-        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 && isValidDate(mm, dd)) {
           dates.push({
             name: '生日',
             month: mm,
@@ -118,7 +128,7 @@ export class SpecialDateManager {
       // 认识纪念日（格式 YYYY-MM-DD）
       if (owner.metDate) {
         const parts = owner.metDate.split('-').map(Number);
-        if (parts.length === 3 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31) {
+        if (parts.length === 3 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31 && isValidDate(parts[1], parts[2])) {
           dates.push({
             name: '认识纪念日',
             month: parts[1],

@@ -7,7 +7,7 @@ use sysinfo::System;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    Manager, State,
+    Emitter, Manager, State,
 };
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -109,8 +109,11 @@ fn main() {
                 &quit_item,
             ])?;
 
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+            let mut tray_builder = TrayIconBuilder::<tauri::Wry>::new();
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+            tray_builder
                 .tooltip("Bird Pet - 你的桌面小鸟")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
