@@ -136,6 +136,11 @@ fn main() {
                         }
                     }
                     "quit" => {
+                        // 优雅关闭：先销毁 WebView 窗口再退出，
+                        // 减少 Windows WebView2 的 "Failed to unregister class" 警告
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.destroy();
+                        }
                         app.exit(0);
                     }
                     _ => {}

@@ -1,8 +1,8 @@
 /**
- * SpecialDateManager - 日期校验单元测试
+ * SpecialDateManager - 日期校验 & 闰年处理单元测试
  */
 import { describe, it, expect } from 'vitest';
-import { isValidDate } from '../src/features/special-dates';
+import { isValidDate, isLeapYear, resolveLeapDay } from '../src/features/special-dates';
 
 describe('isValidDate', () => {
   it('should accept standard valid dates', () => {
@@ -44,5 +44,53 @@ describe('isValidDate', () => {
     expect(isValidDate(1, 0)).toBe(false);
     expect(isValidDate(1, 32)).toBe(false);
     expect(isValidDate(6, -1)).toBe(false);
+  });
+});
+
+describe('isLeapYear', () => {
+  it('should identify common leap years', () => {
+    expect(isLeapYear(2024)).toBe(true);
+    expect(isLeapYear(2028)).toBe(true);
+    expect(isLeapYear(2000)).toBe(true); // 能被 400 整除
+  });
+
+  it('should identify common non-leap years', () => {
+    expect(isLeapYear(2025)).toBe(false);
+    expect(isLeapYear(2026)).toBe(false);
+    expect(isLeapYear(2027)).toBe(false);
+  });
+
+  it('should handle century years correctly', () => {
+    expect(isLeapYear(1900)).toBe(false); // 能被 100 整除但不能被 400 整除
+    expect(isLeapYear(2100)).toBe(false);
+    expect(isLeapYear(2400)).toBe(true);  // 能被 400 整除
+  });
+});
+
+describe('resolveLeapDay', () => {
+  it('should keep 2/29 in leap years', () => {
+    expect(resolveLeapDay(2, 29, 2024)).toEqual({ month: 2, day: 29 });
+    expect(resolveLeapDay(2, 29, 2000)).toEqual({ month: 2, day: 29 });
+  });
+
+  it('should fall back 2/29 to 2/28 in non-leap years', () => {
+    expect(resolveLeapDay(2, 29, 2025)).toEqual({ month: 2, day: 28 });
+    expect(resolveLeapDay(2, 29, 2026)).toEqual({ month: 2, day: 28 });
+    expect(resolveLeapDay(2, 29, 1900)).toEqual({ month: 2, day: 28 });
+  });
+
+  it('should not affect other dates regardless of year', () => {
+    expect(resolveLeapDay(2, 28, 2025)).toEqual({ month: 2, day: 28 });
+    expect(resolveLeapDay(12, 25, 2025)).toEqual({ month: 12, day: 25 });
+    expect(resolveLeapDay(1, 1, 2024)).toEqual({ month: 1, day: 1 });
+    expect(resolveLeapDay(2, 14, 2025)).toEqual({ month: 2, day: 14 });
+  });
+
+  it('should ensure non-leap year 2/29 does NOT overflow to 3/1', () => {
+    // 这是该 bug 的核心场景：之前 new Date(2025, 1, 29) 会溢出到 3/1
+    const resolved = resolveLeapDay(2, 29, 2025);
+    const date = new Date(2025, resolved.month - 1, resolved.day);
+    expect(date.getMonth()).toBe(1); // February (0-indexed)
+    expect(date.getDate()).toBe(28);
   });
 });

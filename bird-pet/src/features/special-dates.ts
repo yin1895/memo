@@ -83,6 +83,26 @@ export function isValidDate(month: number, day: number): boolean {
   return d.getMonth() === month - 1 && d.getDate() === day;
 }
 
+/** 判断指定年份是否为闰年 */
+export function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * 将特殊日期的月/日解析到指定年份的实际日期。
+ * 非闰年的 2/29 回退到 2/28（大多数日历应用的惯例），其余日期原样返回。
+ */
+export function resolveLeapDay(
+  month: number,
+  day: number,
+  year: number,
+): { month: number; day: number } {
+  if (month === 2 && day === 29 && !isLeapYear(year)) {
+    return { month: 2, day: 28 };
+  }
+  return { month, day };
+}
+
 export class SpecialDateManager {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
@@ -169,9 +189,10 @@ export class SpecialDateManager {
     // 动态构建特殊日期列表（包含个性化日期）
     const specialDates = await this.buildSpecialDates();
 
-    // 匹配特殊日期
+    // 匹配特殊日期（非闰年将 2/29 回退到 2/28 匹配）
     const match = specialDates.find((sd) => {
-      if (sd.month !== month || sd.day !== day) return false;
+      const resolved = resolveLeapDay(sd.month, sd.day, year);
+      if (resolved.month !== month || resolved.day !== day) return false;
       if (!sd.recurring && sd.year !== year) return false;
       return true;
     });
@@ -226,12 +247,14 @@ export class SpecialDateManager {
     for (const sd of specialDates) {
       if (!sd.recurring) continue;
 
-      let nextDate = new Date(year, sd.month - 1, sd.day);
+      const thisYearResolved = resolveLeapDay(sd.month, sd.day, year);
+      let nextDate = new Date(year, thisYearResolved.month - 1, thisYearResolved.day);
       nextDate.setHours(0, 0, 0, 0);
 
-      // 如果今年已过，用明年
+      // 如果今年已过，用明年（同样处理闰年回退）
       if (nextDate.getTime() <= now.getTime()) {
-        nextDate = new Date(year + 1, sd.month - 1, sd.day);
+        const nextYearResolved = resolveLeapDay(sd.month, sd.day, year + 1);
+        nextDate = new Date(year + 1, nextYearResolved.month - 1, nextYearResolved.day);
         nextDate.setHours(0, 0, 0, 0);
       }
 
