@@ -14,7 +14,7 @@ import { unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { exit } from '@tauri-apps/plugin-process';
 import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { EventBus } from './events';
 import type { AppEvents } from './types';
 import { initHint, showHint, getLocalDateKey } from './utils';
@@ -159,6 +159,86 @@ async function main() {
       btnSkip: document.getElementById('btn-update-skip') as HTMLButtonElement,
     });
 
+    // ─── 退出相关变量预声明（避免 gracefulShutdown 在启动期被调用时命中 TDZ） ───
+    let shutdownCalled = false;
+    let unlistenAutostart: Promise<() => void> = Promise.resolve(() => {});
+    let unlistenMemories: Promise<() => void> = Promise.resolve(() => {});
+    let unlistenRequestQuit: Promise<() => void> = Promise.resolve(() => {});
+    let autoSaveTimer: number = 0;
+
+    // ─── 统一清理函数（所有退出路径共用） ───
+    async function gracefulShutdown(): Promise<void> {
+      if (shutdownCalled) return;
+      shutdownCalled = true;
+
+      // 阶段 1：保存窗口位置 & 释放监听（可失败，不阻断后续保存）
+      try {
+        const mainWindow = getCurrentWindow();
+        const pos = await mainWindow.outerPosition();
+        await storage.setWindowPosition({ x: pos.x, y: pos.y });
+      } catch (e) {
+        console.warn('gracefulShutdown: 保存窗口位置失败:', e);
+      }
+
+      try {
+        clearInterval(autoSaveTimer);
+        (await unlistenAutostart)();
+        (await unlistenMemories)();
+        (await unlistenRequestQuit)();
+        cleanupInteraction();
+      } catch (e) {
+        console.warn('gracefulShutdown: 释放监听/清理交互失败:', e);
+      }
+
+      // 阶段 2：停止功能模块（可失败，不阻断数据保存）
+      try {
+        idleCare.stop();
+        hourlyChime.stop();
+        pomodoro.stop();
+        systemMonitor.stop();
+        contextAwareness.destroy();
+        quietMode.stop();
+        memory.stop();
+        memoryCard.dispose();
+        memoryPanel.dispose();
+      } catch (e) {
+        console.warn('gracefulShutdown: 停止功能模块失败:', e);
+      }
+
+      // 阶段 3：关键数据落盘（必须执行）
+      try {
+        await memory.save();
+        await storage.save();
+      } catch (e) {
+        console.error('gracefulShutdown: 数据保存失败:', e);
+      }
+
+      // 阶段 4：清理全局资源（可失败）
+      try {
+        await bubble.dispose();
+        bus.dispose();
+        await unregisterAll();
+      } catch (e) {
+        console.warn('gracefulShutdown: 清理全局资源失败:', e);
+      }
+
+      // 清除脏退出标记
+      try {
+        localStorage.removeItem('bird-pet:dirty-shutdown');
+      } catch { /* ignore */ }
+    }
+
+    // ─── 脏退出检测（上次未正常退出时提示） ───
+    try {
+      if (localStorage.getItem('bird-pet:dirty-shutdown') === 'true') {
+        console.warn('检测到上次非正常退出');
+        // 延迟提示，等气泡系统就绪
+        setTimeout(() => {
+          bubble.say({ text: '上次没来得及好好告别呢…这次我会好好守护数据的！', priority: 'low', duration: 5000 });
+        }, 5000);
+      }
+    } catch { /* localStorage 不可用时静默忽略 */ }
+
     // ─── 菜单项配置 ───
     /** 动态更新番茄钟菜单项文字 */
     const updatePomodoroLabel = () => {
@@ -260,8 +340,8 @@ async function main() {
       console.warn('自启动设置失败:', e);
     }
 
-    // 监听托盘菜单事件（保存 unlisten 函数，在 beforeunload 中释放）
-    const unlistenAutostart = listen('tray:toggle-autostart', async () => {
+    // 监听托盘菜单事件（保存 unlisten 函数，在 gracefulShutdown 中释放）
+    unlistenAutostart = listen('tray:toggle-autostart', async () => {
       try {
         const enabled = await isEnabled();
         if (enabled) {
@@ -277,7 +357,7 @@ async function main() {
     });
 
     // 监听托盘菜单"查看回忆"
-    const unlistenMemories = listen('tray:open-memories', async () => {
+    unlistenMemories = listen('tray:open-memories', async () => {
       try {
         await memoryPanel.showPanel();
       } catch (e) {
@@ -285,9 +365,9 @@ async function main() {
       }
     });
 
-    // ─── v1.0.0: 定时自动保存（每 5 分钟） ───
-    const AUTO_SAVE_INTERVAL = 5 * 60 * 1000;
-    const autoSaveTimer = window.setInterval(async () => {
+    // ─── v1.0.0: 定时自动保存（每 2 分钟，减少非受控退出的数据丢失窗口） ───
+    const AUTO_SAVE_INTERVAL = 2 * 60 * 1000;
+    autoSaveTimer = window.setInterval(async () => {
       try {
         await memory.save();
         await storage.save();
@@ -296,47 +376,11 @@ async function main() {
       }
     }, AUTO_SAVE_INTERVAL);
 
-    // ─── 托盘退出监听（预声明，避免 gracefulShutdown 引用时 TDZ） ───
-    let unlistenRequestQuit: Promise<() => void> = Promise.resolve(() => {});
-
-    // ─── 统一清理函数（所有退出路径共用） ───
-    let shutdownCalled = false;
-    async function gracefulShutdown(): Promise<void> {
-      if (shutdownCalled) return;
-      shutdownCalled = true;
-
-      // 保存窗口位置
-      try {
-        const mainWindow = getCurrentWindow();
-        const pos = await mainWindow.outerPosition();
-        await storage.setWindowPosition({ x: pos.x, y: pos.y });
-      } catch { /* ignore */ }
-
-      clearInterval(autoSaveTimer);
-      // 释放托盘事件监听
-      (await unlistenAutostart)();
-      (await unlistenMemories)();
-      (await unlistenRequestQuit)();
-      cleanupInteraction();
-      idleCare.stop();
-      hourlyChime.stop();
-      pomodoro.stop();
-      systemMonitor.stop();
-      contextAwareness.destroy();
-      quietMode.stop();
-      memory.stop();
-      memoryCard.dispose();
-      memoryPanel.dispose();
-      await memory.save();
-      await storage.save();
-      await bubble.dispose();
-      bus.dispose();
-      await unregisterAll();
-    }
-
     // ─── 监听 Rust 端托盘退出请求 ───
     unlistenRequestQuit = listen('app:request-quit', async () => {
       await gracefulShutdown();
+      // 通知 Rust 端清理完成，取消强制退出超时
+      try { await emit('app:shutdown-complete', {}); } catch { /* ignore */ }
       await exit(0);
     });
 
@@ -370,6 +414,11 @@ async function main() {
 
     // ─── 生命周期（兜底：窗口被直接关闭时尝试清理） ───
     window.addEventListener('beforeunload', () => {
+      // 写入脏退出标记（同步 API，可在 beforeunload 中可靠执行）
+      // 若 gracefulShutdown 正常完成会清除此标记
+      try {
+        localStorage.setItem('bird-pet:dirty-shutdown', 'true');
+      } catch { /* localStorage 不可用时静默忽略 */ }
       // beforeunload 是同步的，无法 await 异步操作
       // 核心保存已由 gracefulShutdown() 在各退出路径中完成
       // 此处仅做同步清理兜底
