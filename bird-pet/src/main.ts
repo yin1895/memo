@@ -14,7 +14,7 @@ import { unregisterAll } from '@tauri-apps/plugin-global-shortcut';
 import { exit } from '@tauri-apps/plugin-process';
 import { isEnabled, enable, disable } from '@tauri-apps/plugin-autostart';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { listen, emit } from '@tauri-apps/api/event';
+import { listen } from '@tauri-apps/api/event';
 import { EventBus } from './events';
 import type { AppEvents } from './types';
 import { initHint, showHint, getLocalDateKey } from './utils';
@@ -296,6 +296,9 @@ async function main() {
       }
     }, AUTO_SAVE_INTERVAL);
 
+    // ─── 托盘退出监听（预声明，避免 gracefulShutdown 引用时 TDZ） ───
+    let unlistenRequestQuit: Promise<() => void> = Promise.resolve(() => {});
+
     // ─── 统一清理函数（所有退出路径共用） ───
     let shutdownCalled = false;
     async function gracefulShutdown(): Promise<void> {
@@ -332,7 +335,7 @@ async function main() {
     }
 
     // ─── 监听 Rust 端托盘退出请求 ───
-    const unlistenRequestQuit = listen('app:request-quit', async () => {
+    unlistenRequestQuit = listen('app:request-quit', async () => {
       await gracefulShutdown();
       await exit(0);
     });

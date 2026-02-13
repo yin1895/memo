@@ -141,10 +141,11 @@ fn main() {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.emit("app:request-quit", ());
                         }
-                        // 安全超时兜底：若前端未响应则 3 秒后强制退出
+                        // 安全超时兜底：若前端未响应则 8 秒后强制退出
+                        // （留足异步保存时间，避免慢盘场景下打断落盘）
                         let handle = app.clone();
                         std::thread::spawn(move || {
-                            std::thread::sleep(Duration::from_secs(3));
+                            std::thread::sleep(Duration::from_secs(8));
                             handle.exit(0);
                         });
                     }

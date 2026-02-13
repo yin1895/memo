@@ -44,13 +44,12 @@ export class BubbleManager {
 
   async init(): Promise<void> {
     // 先注册 bubble:ready 监听，再创建窗口，消除竞态
-    let readyUnsub: (() => void) | null = null;
+    let readyResolve: () => void;
     const readyPromise = new Promise<void>((resolve) => {
-      listen('bubble:ready', () => {
-        resolve();
-      }).then((fn) => {
-        readyUnsub = fn;
-      });
+      readyResolve = resolve;
+    });
+    const readyUnsubPromise = listen('bubble:ready', () => {
+      readyResolve();
     });
 
     this.bubbleWin = new WebviewWindow('bubble', {
@@ -86,7 +85,8 @@ export class BubbleManager {
       ]);
     } finally {
       // 无论成功/超时/异常，都释放 ready 监听器
-      readyUnsub?.();
+      const readyUnsub = await readyUnsubPromise;
+      readyUnsub();
     }
 
     // 监听主窗口移动，同步气泡位置
