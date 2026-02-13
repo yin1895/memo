@@ -128,9 +128,10 @@ export class StorageService {
     await this.set(STORE_KEYS.LAST_ACTIVE_DATE, today);
   }
 
-  /** 获取用户偏好 */
+  /** 获取用户偏好（始终与默认值合并，兼容旧版数据缺字段） */
   async getPreferences(): Promise<UserPreferences> {
-    return this.get(STORE_KEYS.PREFERENCES, DEFAULT_PREFERENCES);
+    const stored = await this.get(STORE_KEYS.PREFERENCES, DEFAULT_PREFERENCES);
+    return { ...DEFAULT_PREFERENCES, ...stored };
   }
 
   /** 更新用户偏好 */
@@ -139,9 +140,10 @@ export class StorageService {
     await this.set(STORE_KEYS.PREFERENCES, { ...current, ...prefs });
   }
 
-  /** 获取宠物主人信息 */
+  /** 获取宠物主人信息（始终与默认值合并，兼容旧版数据缺字段） */
   async getPetOwner(): Promise<PetOwnerProfile> {
-    return this.get(STORE_KEYS.PET_OWNER, DEFAULT_PET_OWNER);
+    const stored = await this.get(STORE_KEYS.PET_OWNER, DEFAULT_PET_OWNER);
+    return { ...DEFAULT_PET_OWNER, ...stored };
   }
 
   /** 更新宠物主人信息 */

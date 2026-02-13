@@ -39,7 +39,20 @@ export class BubbleManager {
    * 初始化气泡窗口（应用启动时调用一次）
    * 创建隐藏的 WebviewWindow，等待其内部脚本就绪。
    */
+  /** 气泡就绪等待超时（毫秒） */
+  static readonly READY_TIMEOUT = 10_000;
+
   async init(): Promise<void> {
+    // 先注册 bubble:ready 监听，再创建窗口，消除竞态
+    let readyUnsub: (() => void) | null = null;
+    const readyPromise = new Promise<void>((resolve) => {
+      listen('bubble:ready', () => {
+        resolve();
+      }).then((fn) => {
+        readyUnsub = fn;
+      });
+    });
+
     this.bubbleWin = new WebviewWindow('bubble', {
       url: '/bubble.html',
       width: BUBBLE_WIDTH,
@@ -60,13 +73,18 @@ export class BubbleManager {
       this.bubbleWin!.once('tauri://error', (e) => reject(e));
     });
 
-    // 等待气泡窗口内部脚本就绪
-    await new Promise<void>((resolve) => {
-      const unlisten = listen('bubble:ready', () => {
-        unlisten.then(fn => fn());
-        resolve();
-      });
-    });
+    // 等待气泡窗口内部脚本就绪（带超时保护）
+    await Promise.race([
+      readyPromise,
+      new Promise<void>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('bubble:ready timeout — 气泡窗口未在规定时间内就绪')),
+          BubbleManager.READY_TIMEOUT,
+        ),
+      ),
+    ]);
+    // 就绪后释放监听器
+    readyUnsub?.();
 
     // 监听主窗口移动，同步气泡位置
     this.moveUnlisten = await this.mainWin.onMoved(() => {
