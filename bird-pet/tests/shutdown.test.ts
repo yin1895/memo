@@ -64,7 +64,7 @@ interface MockModules {
   hourlyChime: { stop: ReturnType<typeof vi.fn<() => void>> };
   pomodoro: { stop: ReturnType<typeof vi.fn<() => void>> };
   systemMonitor: { stop: ReturnType<typeof vi.fn<() => void>> };
-  contextAwareness: { destroy: ReturnType<typeof vi.fn<() => void>> };
+  contextAwareness: { dispose: ReturnType<typeof vi.fn<() => void>> };
   quietMode: { stop: ReturnType<typeof vi.fn<() => void>> };
   memoryCard: { dispose: ReturnType<typeof vi.fn<() => void>> };
   memoryPanel: { dispose: ReturnType<typeof vi.fn<() => void>> };
@@ -87,7 +87,7 @@ function createMocks(): MockModules {
     hourlyChime: { stop: vi.fn() },
     pomodoro: { stop: vi.fn() },
     systemMonitor: { stop: vi.fn() },
-    contextAwareness: { destroy: vi.fn() },
+    contextAwareness: { dispose: vi.fn() },
     quietMode: { stop: vi.fn() },
     memoryCard: { dispose: vi.fn() },
     memoryPanel: { dispose: vi.fn() },
@@ -135,7 +135,7 @@ function buildGracefulShutdown(mocks: MockModules, overrides?: {
       mocks.hourlyChime.stop();
       mocks.pomodoro.stop();
       mocks.systemMonitor.stop();
-      mocks.contextAwareness.destroy();
+      mocks.contextAwareness.dispose();
       mocks.quietMode.stop();
       mocks.memory.stop();
       mocks.memoryCard.dispose();

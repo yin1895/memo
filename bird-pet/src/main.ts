@@ -259,7 +259,7 @@ function initLifecycle(core: CoreModules, features: FeatureModules): LifecycleCo
       features.hourlyChime.stop();
       await features.pomodoro.stop();
       features.systemMonitor.stop();
-      features.contextAwareness.destroy();
+      features.contextAwareness.dispose();
       core.quietMode.stop();
       core.memory.stop();
       core.animation.stop();
