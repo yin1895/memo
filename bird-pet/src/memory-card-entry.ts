@@ -48,6 +48,8 @@ const CONTEXT_NAMES: Record<string, string> = {
   unknown: '各种事 ✨',
 };
 
+let autoCloseTimer: number | null = null;
+
 function renderCard(data: MemoryCardData): void {
   const card = document.getElementById('memory-card')!;
   const mainStat = document.getElementById('card-main-stat')!;
@@ -87,14 +89,28 @@ function renderCard(data: MemoryCardData): void {
   }
 
   // 显示
-  card.classList.remove('card-hidden');
+  card.classList.remove('card-hidden', 'card-fadeout');
   card.classList.add('card-visible');
 
+  // 重置旧自动关闭定时器，避免短时间重复渲染导致提前关闭
+  if (autoCloseTimer !== null) {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
+
   // 8 秒后自动关闭
-  setTimeout(closeCard, 8000);
+  autoCloseTimer = window.setTimeout(() => {
+    autoCloseTimer = null;
+    closeCard();
+  }, 8000);
 }
 
 function closeCard(): void {
+  if (autoCloseTimer !== null) {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
+
   const card = document.getElementById('memory-card')!;
   card.classList.remove('card-visible');
   card.classList.add('card-fadeout');
