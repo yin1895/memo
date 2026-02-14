@@ -48,7 +48,11 @@ export interface PetOwnerProfile {
   birthday: string;
 }
 
-/** 默认主人信息（芊芊 💕） */
+/**
+ * 默认主人信息（私人项目默认值）
+ *
+ * 若对外发布，请在初始化流程中引导用户配置，避免把默认私有资料当作公共默认值。
+ */
 const DEFAULT_PET_OWNER: PetOwnerProfile = {
   name: '雨芊',
   nicknames: ['芊芊', '雨芊', '小芊', '芊宝'],

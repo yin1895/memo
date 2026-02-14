@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import type { AppContext } from '../features/dialogue-engine';
 import { StorageService, STORE_KEYS } from './storage';
+import { AFFINITY_THRESHOLDS } from '../constants';
 import { getDatesBetween, getLocalDateKey } from '../utils';
 
 /** 滚动窗口天数 */
@@ -30,17 +31,6 @@ const DEFAULT_PROFILE: UserProfile = {
   lastActiveDate: '',
   dailySummaries: [],
 };
-
-/**
- * 亲密度等级阈值
- * 0-49 → 1(陌生), 50-199 → 2(熟悉), 200-499 → 3(亲密), 500+ → 4(挚友)
- */
-const AFFINITY_THRESHOLDS = [
-  { min: 500, level: 4 },
-  { min: 200, level: 3 },
-  { min: 50, level: 2 },
-  { min: 0, level: 1 },
-];
 
 export class MemorySystem {
   private bus: EventBus<AppEvents>;
@@ -114,7 +104,8 @@ export class MemorySystem {
    */
   getAffinityLevel(): number {
     const total = this.profile.totalInteractions;
-    for (const t of AFFINITY_THRESHOLDS) {
+    for (let i = AFFINITY_THRESHOLDS.length - 1; i >= 0; i--) {
+      const t = AFFINITY_THRESHOLDS[i];
       if (total >= t.min) return t.level;
     }
     return 1;

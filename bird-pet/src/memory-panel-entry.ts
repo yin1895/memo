@@ -7,6 +7,7 @@
 import './memory-panel.css';
 import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { AFFINITY_THRESHOLDS } from './constants';
 import { getLocalDateKey } from './utils';
 
 /** 主窗口发来的面板数据结构 */
@@ -30,14 +31,6 @@ interface PanelData {
   }>;
   totalPomodoros: number;
 }
-
-/** 亲密度阈值 */
-const AFFINITY_THRESHOLDS = [
-  { level: 1, min: 0, next: 50 },
-  { level: 2, min: 50, next: 200 },
-  { level: 3, min: 200, next: 500 },
-  { level: 4, min: 500, next: Infinity },
-];
 
 /** 作息模式中文 */
 const SLEEP_LABELS: Record<string, string> = {

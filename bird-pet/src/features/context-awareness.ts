@@ -135,15 +135,17 @@ export class ContextAwareness {
 
   /** 根据窗口信息分类用户行为 */
   private classify(info: ActiveWindowInfo): AppContext {
-    const target = `${info.app_name} ${info.title}`;
+    const appName = info.app_name ?? '';
+    const title = info.title ?? '';
+    const matches = (rule: RegExp) => rule.test(appName) || rule.test(title);
 
     // 按优先级匹配（meeting > gaming > music > coding > browsing > idle）
-    if (APP_RULES.meeting.test(target)) return 'meeting';
-    if (APP_RULES.gaming.test(target)) return 'gaming';
-    if (APP_RULES.music.test(target)) return 'music';
-    if (APP_RULES.coding.test(target)) return 'coding';
-    if (APP_RULES.browsing.test(target)) return 'browsing';
-    if (APP_RULES.idle.test(target)) return 'idle';
+    if (matches(APP_RULES.meeting)) return 'meeting';
+    if (matches(APP_RULES.gaming)) return 'gaming';
+    if (matches(APP_RULES.music)) return 'music';
+    if (matches(APP_RULES.coding)) return 'coding';
+    if (matches(APP_RULES.browsing)) return 'browsing';
+    if (matches(APP_RULES.idle)) return 'idle';
 
     return 'unknown';
   }

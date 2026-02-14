@@ -161,10 +161,13 @@ export class EffectsManager {
 
       this.container.appendChild(span);
 
-      // 动画结束后自动移除
-      span.addEventListener('animationend', () => span.remove(), { once: true });
       // 兜底移除（防止 animationend 未触发）
-      setTimeout(() => span.remove(), duration + 500);
+      const fallbackTimer = setTimeout(() => span.remove(), duration + 500);
+      // 动画结束后自动移除，并清理兜底定时器
+      span.addEventListener('animationend', () => {
+        clearTimeout(fallbackTimer);
+        span.remove();
+      }, { once: true });
     }
   }
 }
