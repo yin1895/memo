@@ -107,12 +107,15 @@ export class ContextAwareness {
       const newContext = this.classify(info);
 
       // 上下文发生变化
-      if (newContext !== this._currentContext && newContext !== 'unknown') {
+      if (newContext !== this._currentContext) {
         const oldContext = this._currentContext;
         this._currentContext = newContext;
 
         // 广播上下文变更事件
         this.bus.emit('context:changed', { from: oldContext, to: newContext });
+
+        // unknown 仅用于状态复位，不触发上下文气泡
+        if (newContext === 'unknown') return;
 
         // 冷却检查：距上次台词 ≥ 5 分钟才说话
         // v1.0.0: 静默模式下跳过气泡（但上下文事件仍广播，供 QuietMode 追踪）

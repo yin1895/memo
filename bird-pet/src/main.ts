@@ -39,6 +39,11 @@ import { GreetingManager } from './features/greeting';
 import { MemoryCardManager } from './features/memory-card';
 import { MemoryPanelManager } from './features/memory-panel';
 import { QuietModeManager } from './features/quiet-mode';
+import {
+  clearDirtyShutdown,
+  hasDirtyShutdown,
+  markDirtyOnBeforeUnload,
+} from './core/dirty-shutdown';
 
 async function main() {
   try {
@@ -161,6 +166,7 @@ async function main() {
 
     // ─── 退出相关变量预声明（避免 gracefulShutdown 在启动期被调用时命中 TDZ） ───
     let shutdownCalled = false;
+    let gracefulShutdownStarted = false;
     let unlistenAutostart: Promise<() => void> = Promise.resolve(() => {});
     let unlistenMemories: Promise<() => void> = Promise.resolve(() => {});
     let unlistenRequestQuit: Promise<() => void> = Promise.resolve(() => {});
@@ -170,6 +176,7 @@ async function main() {
     async function gracefulShutdown(): Promise<void> {
       if (shutdownCalled) return;
       shutdownCalled = true;
+      gracefulShutdownStarted = true;
 
       // 阶段 1：保存窗口位置 & 释放监听（可失败，不阻断后续保存）
       try {
@@ -223,21 +230,17 @@ async function main() {
       }
 
       // 清除脏退出标记
-      try {
-        localStorage.removeItem('bird-pet:dirty-shutdown');
-      } catch { /* ignore */ }
+      clearDirtyShutdown();
     }
 
     // ─── 脏退出检测（上次未正常退出时提示） ───
-    try {
-      if (localStorage.getItem('bird-pet:dirty-shutdown') === 'true') {
-        console.warn('检测到上次非正常退出');
-        // 延迟提示，等气泡系统就绪
-        setTimeout(() => {
-          bubble.say({ text: '上次没来得及好好告别呢…这次我会好好守护数据的！', priority: 'low', duration: 5000 });
-        }, 5000);
-      }
-    } catch { /* localStorage 不可用时静默忽略 */ }
+    if (hasDirtyShutdown()) {
+      console.warn('检测到上次非正常退出');
+      // 延迟提示，等气泡系统就绪
+      setTimeout(() => {
+        bubble.say({ text: '上次没来得及好好告别呢…这次我会好好守护数据的！', priority: 'low', duration: 5000 });
+      }, 5000);
+    }
 
     // ─── 菜单项配置 ───
     /** 动态更新番茄钟菜单项文字 */
@@ -414,11 +417,8 @@ async function main() {
 
     // ─── 生命周期（兜底：窗口被直接关闭时尝试清理） ───
     window.addEventListener('beforeunload', () => {
-      // 写入脏退出标记（同步 API，可在 beforeunload 中可靠执行）
-      // 若 gracefulShutdown 正常完成会清除此标记
-      try {
-        localStorage.setItem('bird-pet:dirty-shutdown', 'true');
-      } catch { /* localStorage 不可用时静默忽略 */ }
+      // 仅在未进入 graceful 退出路径时标记脏退出，避免正常退出被误判
+      markDirtyOnBeforeUnload(gracefulShutdownStarted);
       // beforeunload 是同步的，无法 await 异步操作
       // 核心保存已由 gracefulShutdown() 在各退出路径中完成
       // 此处仅做同步清理兜底
