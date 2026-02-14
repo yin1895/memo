@@ -51,6 +51,8 @@ export type DialogueScene =
   | 'special_christmas'
   | 'special_newyear'
   | 'special_520'
+  // v1.0.0: 认识纪念日
+  | 'special_anniversary'
   // v0.5.0: 时段问候场景
   | 'greeting_morning'
   | 'greeting_noon'
@@ -97,6 +99,20 @@ export interface DialogueContext extends Partial<MemorySnapshot> {
 /** 最近台词去重队列容量 */
 const RECENT_LINES_CAPACITY = 10;
 
+/** 全局模板变量（在初始化时注入，台词中的 {nickname} / {name} / {daysSinceMet} 等会被替换） */
+export interface GlobalTemplateVars {
+  /** 主人名字 */
+  name: string;
+  /** 随机称呼（每次调用时从池中随机取） */
+  nickname: string;
+  /** 称呼池 */
+  nicknames: string[];
+  /** 认识日期 */
+  metDate: string;
+  /** 距离认识日的天数 */
+  daysSinceMet: number;
+}
+
 /**
  * 对话引擎主类
  *
@@ -106,9 +122,19 @@ export class DialogueEngine {
   private entries: DialogueEntry[];
   /** 最近使用的台词队列（FIFO），用于去重 */
   private recentLines: string[] = [];
+  /** 全局模板变量 */
+  private globalVars: GlobalTemplateVars | null = null;
 
   constructor(entries: DialogueEntry[]) {
     this.entries = entries;
+  }
+
+  /**
+   * 设置全局模板变量（主人信息）
+   * 应在应用启动时调用一次
+   */
+  setGlobalVars(vars: GlobalTemplateVars): void {
+    this.globalVars = vars;
   }
 
   /**
@@ -122,7 +148,10 @@ export class DialogueEngine {
     // 筛选匹配该场景的条目
     const candidates = this.entries.filter((e) => {
       if (e.scene !== scene) return false;
-      if (!e.conditions || !ctx) return true;
+      // 无条件条目始终匹配
+      if (!e.conditions) return true;
+      // 有条件但调用方未传上下文 → 排除，防止条件约束被悄悄绕过
+      if (!ctx) return false;
       return this.matchConditions(e.conditions, ctx);
     });
 
@@ -159,14 +188,11 @@ export class DialogueEngine {
     if (entries.length === 0) return null;
 
     const allLines = entries.flatMap((e) => e.lines);
-    return this.pickWithDedup(allLines);
+    return this.applyTemplate(this.pickWithDedup(allLines));
   }
 
   /** 检查条件是否满足（v0.4.0 扩展记忆条件） */
-  private matchConditions(
-    cond: DialogueCondition,
-    ctx: Partial<DialogueContext>,
-  ): boolean {
+  private matchConditions(cond: DialogueCondition, ctx: Partial<DialogueContext>): boolean {
     // 小时范围
     if (cond.hourRange && ctx.hour !== undefined) {
       const [start, end] = cond.hourRange;
@@ -202,15 +228,32 @@ export class DialogueEngine {
 
   /**
    * 简单模板变量替换
-   * 将 {key} 占位符替换为 ctx 中的同名字段值
+   * 将 {key} 占位符替换为 ctx 中的同名字段值，
+   * 并注入全局模板变量（nickname 每次随机取）
    */
-  private applyTemplate(
-    line: string,
-    ctx?: Partial<DialogueContext>,
-  ): string {
-    if (!ctx) return line;
+  private applyTemplate(line: string, ctx?: Partial<DialogueContext>): string {
+    // 构建合并的变量池
+    const vars: Record<string, unknown> = {};
+
+    // 全局变量（主人信息）
+    if (this.globalVars) {
+      vars.name = this.globalVars.name;
+      // 每次随机从称呼池取
+      vars.nickname =
+        this.globalVars.nicknames[Math.floor(Math.random() * this.globalVars.nicknames.length)];
+      vars.daysSinceMet = this.globalVars.daysSinceMet;
+      vars.metDate = this.globalVars.metDate;
+    }
+
+    // 上下文变量（覆盖全局）
+    if (ctx) {
+      for (const [k, v] of Object.entries(ctx)) {
+        if (v !== undefined && v !== null) vars[k] = v;
+      }
+    }
+
     return line.replace(/\{(\w+)\}/g, (match, key) => {
-      const val = (ctx as Record<string, unknown>)[key];
+      const val = vars[key];
       return val !== undefined && val !== null ? String(val) : match;
     });
   }

@@ -36,17 +36,9 @@ export interface SpecialDate {
 /**
  * 特殊日期配置表
  *
- * ⚠️ 请根据实际情况修改日期！
+ * 固定节日硬编码，生日/纪念日在运行时从 PetOwnerProfile 动态生成。
  */
-const SPECIAL_DATES: SpecialDate[] = [
-  {
-    name: '生日',
-    month: 9,
-    day: 20,
-    scene: 'special_birthday',
-    effectType: 'confetti',
-    recurring: true,
-  },
+const FIXED_SPECIAL_DATES: SpecialDate[] = [
   {
     name: '情人节',
     month: 2,
@@ -81,6 +73,36 @@ const SPECIAL_DATES: SpecialDate[] = [
   },
 ];
 
+/**
+ * 校验月-日组合是否为合法日期
+ * 使用闰年 2000 作为基准，允许 2/29 作为合法生日/纪念日
+ */
+export function isValidDate(month: number, day: number): boolean {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const d = new Date(2000, month - 1, day);
+  return d.getMonth() === month - 1 && d.getDate() === day;
+}
+
+/** 判断指定年份是否为闰年 */
+export function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * 将特殊日期的月/日解析到指定年份的实际日期。
+ * 非闰年的 2/29 回退到 2/28（大多数日历应用的惯例），其余日期原样返回。
+ */
+export function resolveLeapDay(
+  month: number,
+  day: number,
+  year: number,
+): { month: number; day: number } {
+  if (month === 2 && day === 29 && !isLeapYear(year)) {
+    return { month: 2, day: 28 };
+  }
+  return { month, day };
+}
+
 export class SpecialDateManager {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
@@ -100,6 +122,57 @@ export class SpecialDateManager {
   }
 
   /**
+   * 从 PetOwnerProfile 动态构建完整特殊日期列表
+   * 固定节日 + 个性化日期（生日/纪念日）
+   */
+  private async buildSpecialDates(): Promise<SpecialDate[]> {
+    const dates = [...FIXED_SPECIAL_DATES];
+    try {
+      const owner = await this.storage.getPetOwner();
+
+      // 生日（格式 MM-DD）
+      if (owner.birthday) {
+        const [mm, dd] = owner.birthday.split('-').map(Number);
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 && isValidDate(mm, dd)) {
+          dates.push({
+            name: '生日',
+            month: mm,
+            day: dd,
+            scene: 'special_birthday',
+            effectType: 'confetti',
+            recurring: true,
+          });
+        }
+      }
+
+      // 认识纪念日（格式 YYYY-MM-DD）
+      if (owner.metDate) {
+        const parts = owner.metDate.split('-').map(Number);
+        if (
+          parts.length === 3 &&
+          parts[1] >= 1 &&
+          parts[1] <= 12 &&
+          parts[2] >= 1 &&
+          parts[2] <= 31 &&
+          isValidDate(parts[1], parts[2])
+        ) {
+          dates.push({
+            name: '认识纪念日',
+            month: parts[1],
+            day: parts[2],
+            scene: 'special_anniversary',
+            effectType: 'hearts',
+            recurring: true,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('读取主人信息失败，使用固定节日列表:', e);
+    }
+    return dates;
+  }
+
+  /**
    * 检查今天是否是特殊日期
    *
    * 命中时：发送专属台词 + 双波粒子特效。
@@ -114,15 +187,16 @@ export class SpecialDateManager {
     const todayKey = getLocalDateKey(now);
 
     // 检查是否已触发
-    const lastTriggered = await this.storage.get<string>(
-      STORE_KEYS.SPECIAL_DATE_TRIGGERED,
-      '',
-    );
+    const lastTriggered = await this.storage.get<string>(STORE_KEYS.SPECIAL_DATE_TRIGGERED, '');
     if (lastTriggered === todayKey) return;
 
-    // 匹配特殊日期
-    const match = SPECIAL_DATES.find((sd) => {
-      if (sd.month !== month || sd.day !== day) return false;
+    // 动态构建特殊日期列表（包含个性化日期）
+    const specialDates = await this.buildSpecialDates();
+
+    // 匹配特殊日期（非闰年将 2/29 回退到 2/28 匹配）
+    const match = specialDates.find((sd) => {
+      const resolved = resolveLeapDay(sd.month, sd.day, year);
+      if (resolved.month !== month || resolved.day !== day) return false;
       if (!sd.recurring && sd.year !== year) return false;
       return true;
     });
@@ -148,7 +222,7 @@ export class SpecialDateManager {
     await this.storage.set(STORE_KEYS.SPECIAL_DATE_TRIGGERED, todayKey);
 
     // 倒计时预告（≤ 7 天）
-    const next = this.getDaysUntilNext();
+    const next = await this.getDaysUntilNext();
     if (next && next.days > 0 && next.days <= 7) {
       setTimeout(() => {
         const countdownLines = [
@@ -166,27 +240,29 @@ export class SpecialDateManager {
    * 获取距离最近一个特殊日期的天数
    * @returns 天数和日期名称，无特殊日期时返回 null
    */
-  getDaysUntilNext(): { days: number; name: string } | null {
+  async getDaysUntilNext(): Promise<{ days: number; name: string } | null> {
     const now = new Date();
     now.setHours(0, 0, 0, 0); // 归零到当天零点
     const year = now.getFullYear();
     let closest: { days: number; name: string } | null = null;
 
-    for (const sd of SPECIAL_DATES) {
+    const specialDates = await this.buildSpecialDates();
+
+    for (const sd of specialDates) {
       if (!sd.recurring) continue;
 
-      let nextDate = new Date(year, sd.month - 1, sd.day);
+      const thisYearResolved = resolveLeapDay(sd.month, sd.day, year);
+      let nextDate = new Date(year, thisYearResolved.month - 1, thisYearResolved.day);
       nextDate.setHours(0, 0, 0, 0);
 
-      // 如果今年已过，用明年
+      // 如果今年已过，用明年（同样处理闰年回退）
       if (nextDate.getTime() <= now.getTime()) {
-        nextDate = new Date(year + 1, sd.month - 1, sd.day);
+        const nextYearResolved = resolveLeapDay(sd.month, sd.day, year + 1);
+        nextDate = new Date(year + 1, nextYearResolved.month - 1, nextYearResolved.day);
         nextDate.setHours(0, 0, 0, 0);
       }
 
-      const diff = Math.ceil(
-        (nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      const diff = Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
       if (closest === null || diff < closest.days) {
         closest = { days: diff, name: sd.name };

@@ -1,230 +1,270 @@
 /**
  * Bird Pet - 桌面宠物应用入口
  *
- * 此文件是精简的编排层，负责：
- * 1. 初始化各模块
- * 2. 通过 EventBus 连接模块
- * 3. 配置菜单项
- * 4. 启动应用
- *
- * 具体逻辑分散在 core/ 下各模块中。
+ * 此文件作为编排层：
+ * 1. 初始化核心依赖与功能模块
+ * 2. 绑定事件与菜单
+ * 3. 管理生命周期与退出流程
  */
 import './style.css';
-import { unregisterAll } from '@tauri-apps/plugin-global-shortcut';
+import { emit, listen } from '@tauri-apps/api/event';
+import { disable, enable, isEnabled } from '@tauri-apps/plugin-autostart';
 import { exit } from '@tauri-apps/plugin-process';
-import { EventBus } from './events';
-import type { AppEvents } from './types';
-import { initHint, showHint, getLocalDateKey } from './utils';
-import { AnimationEngine } from './core/animation';
-import { ClickThroughManager } from './core/click-through';
-import { MenuController, type MenuItem } from './core/menu';
-import { setupInteraction } from './core/interaction';
-import { UpdateController } from './core/updater';
-import { BubbleManager } from './core/bubble-manager';
-import { StorageService, STORE_KEYS } from './core/storage';
-import { MemorySystem } from './core/memory';
-import { EffectsManager } from './core/effects';
-import { IdleCareScheduler } from './features/idle-care';
-import { HourlyChime } from './features/hourly-chime';
-import { PomodoroTimer } from './features/pomodoro';
-import { SystemMonitor } from './features/system-monitor';
-import { ContextAwareness } from './features/context-awareness';
-import { DialogueEngine } from './features/dialogue-engine';
-import { DIALOGUE_ENTRIES } from './features/messages';
-import { SpecialDateManager } from './features/special-dates';
-import { GreetingManager } from './features/greeting';
+import { bindBusinessEvents } from '@/app/business-events';
+import { initLifecycle } from '@/app/lifecycle';
+import { createMenuItems } from '@/app/menu-items';
+import { restoreWindowPosition, startModules, syncAutoStart } from '@/app/runtime';
+import { getAutoSaveIntervalMs, runDailyStartupFlow } from '@/app/startup-flow';
+import type { CoreModules, FeatureModules } from '@/app/types';
+import { AnimationEngine } from '@/core/animation';
+import { BubbleManager } from '@/core/bubble-manager';
+import { ClickThroughManager } from '@/core/click-through';
+import { EffectsManager } from '@/core/effects';
+import { setupInteraction } from '@/core/interaction';
+import { MenuController } from '@/core/menu';
+import { MemorySystem } from '@/core/memory';
+import { StorageService } from '@/core/storage';
+import { UpdateController } from '@/core/updater';
+import { EventBus } from '@/events';
+import { ContextAwareness } from '@/features/context-awareness';
+import { DialogueEngine } from '@/features/dialogue-engine';
+import { GreetingManager } from '@/features/greeting';
+import { HourlyChime } from '@/features/hourly-chime';
+import { IdleCareScheduler } from '@/features/idle-care';
+import { MemoryCardManager } from '@/features/memory-card';
+import { MemoryPanelManager } from '@/features/memory-panel';
+import { DIALOGUE_ENTRIES } from '@/features/messages';
+import { PomodoroTimer } from '@/features/pomodoro';
+import { QuietModeManager } from '@/features/quiet-mode';
+import { SpecialDateManager } from '@/features/special-dates';
+import { SystemMonitor } from '@/features/system-monitor';
+import type { AppEvents } from '@/types';
+import { calcDaysSinceMet, initHint, showHint } from '@/utils';
+import { hasDirtyShutdown } from '@/core/dirty-shutdown';
+
+function mustGetElement<T extends HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`missing required element: #${id}`);
+  return el as T;
+}
+
+function createUpdaterController(): UpdateController {
+  return new UpdateController({
+    overlay: mustGetElement<HTMLDivElement>('update-overlay'),
+    message: mustGetElement<HTMLDivElement>('update-message'),
+    version: mustGetElement<HTMLDivElement>('update-version'),
+    progressWrap: mustGetElement<HTMLDivElement>('update-progress-wrap'),
+    progressBar: mustGetElement<HTMLDivElement>('update-progress-bar'),
+    progressText: mustGetElement<HTMLDivElement>('update-progress-text'),
+    btnNow: mustGetElement<HTMLButtonElement>('btn-update-now'),
+    btnLater: mustGetElement<HTMLButtonElement>('btn-update-later'),
+    btnSkip: mustGetElement<HTMLButtonElement>('btn-update-skip'),
+  });
+}
+
+async function initCore(): Promise<CoreModules> {
+  const bus = new EventBus<AppEvents>();
+
+  const app = mustGetElement<HTMLDivElement>('app');
+  const canvas = mustGetElement<HTMLCanvasElement>('pet');
+  initHint(mustGetElement<HTMLDivElement>('hint'));
+
+  const animation = new AnimationEngine(canvas, bus);
+  await animation.load();
+
+  const clickThrough = new ClickThroughManager(app, bus);
+  const menu = new MenuController(mustGetElement<HTMLDivElement>('menu'), bus, clickThrough);
+
+  const bubble = new BubbleManager();
+  await bubble.init();
+
+  const storage = new StorageService();
+  const dialogue = new DialogueEngine(DIALOGUE_ENTRIES);
+  const effects = new EffectsManager();
+
+  const petOwner = await storage.getPetOwner();
+  const daysSinceMet = calcDaysSinceMet(petOwner.metDate);
+  dialogue.setGlobalVars({
+    name: petOwner.name,
+    nickname: petOwner.nicknames[0],
+    nicknames: petOwner.nicknames,
+    metDate: petOwner.metDate,
+    daysSinceMet,
+  });
+
+  const memory = new MemorySystem(bus, storage);
+  const quietMode = new QuietModeManager(bus, storage);
+  const updater = createUpdaterController();
+
+  return {
+    bus,
+    app,
+    canvas,
+    animation,
+    clickThrough,
+    menu,
+    bubble,
+    storage,
+    dialogue,
+    effects,
+    memory,
+    quietMode,
+    updater,
+    petOwner,
+  };
+}
+
+function initFeatures(core: CoreModules): FeatureModules {
+  const idleCare = new IdleCareScheduler(
+    core.bus,
+    core.bubble,
+    core.dialogue,
+    core.memory,
+    core.quietMode,
+  );
+  const hourlyChime = new HourlyChime(core.bubble, core.dialogue, core.storage, core.quietMode);
+  const pomodoro = new PomodoroTimer(
+    core.bus,
+    core.bubble,
+    hourlyChime,
+    core.dialogue,
+    core.storage,
+  );
+  const systemMonitor = new SystemMonitor(core.bubble, core.storage);
+  const contextAwareness = new ContextAwareness(
+    core.bus,
+    core.bubble,
+    core.dialogue,
+    core.storage,
+    core.quietMode,
+  );
+  const specialDates = new SpecialDateManager(
+    core.bubble,
+    core.dialogue,
+    core.effects,
+    core.storage,
+  );
+  const greeting = new GreetingManager(core.bubble, core.dialogue, core.effects);
+  const memoryCard = new MemoryCardManager(
+    core.bus,
+    core.memory,
+    core.storage,
+    core.petOwner,
+    core.petOwner.metDate,
+  );
+  const memoryPanel = new MemoryPanelManager(core.memory, core.petOwner.metDate);
+
+  return {
+    idleCare,
+    hourlyChime,
+    pomodoro,
+    systemMonitor,
+    contextAwareness,
+    specialDates,
+    greeting,
+    memoryCard,
+    memoryPanel,
+  };
+}
 
 async function main() {
   try {
-    // ─── 事件总线 ───
-    const bus = new EventBus<AppEvents>();
+    const core = await initCore();
+    const features = initFeatures(core);
+    bindBusinessEvents(core);
 
-    // ─── DOM 引用 ───
-    const app = document.querySelector<HTMLDivElement>('#app')!;
-    const canvas = document.getElementById('pet') as HTMLCanvasElement;
-    initHint(document.getElementById('hint') as HTMLDivElement);
+    if (hasDirtyShutdown()) {
+      console.warn('检测到上次非正常退出');
+      setTimeout(() => {
+        core.bubble.say({
+          text: '上次没来得及好好告别呢…这次我会好好守护数据的！',
+          priority: 'low',
+          duration: 5000,
+        });
+      }, 5000);
+    }
 
-    // ─── 核心模块初始化 ───
-    const animation = new AnimationEngine(canvas, bus);
-    await animation.load();
+    const lifecycle = initLifecycle(core, features);
 
-    const clickThrough = new ClickThroughManager(app, bus);
+    core.menu.setItems(createMenuItems(core, features, lifecycle.gracefulShutdown));
+    core.bus.on('menu:opened', () => {
+      const el = document.querySelector('[data-id="pomodoro"]');
+      if (el) el.textContent = features.pomodoro.getStatusLabel();
+    });
 
-    const menu = new MenuController(
-      document.getElementById('menu') as HTMLDivElement,
-      bus,
-      clickThrough,
+    const cleanupInteraction = setupInteraction({
+      canvas: core.canvas,
+      app: core.app,
+      animation: core.animation,
+      clickThrough: core.clickThrough,
+      menu: core.menu,
+      bus: core.bus,
+      quietMode: core.quietMode,
+      onQuit: async () => {
+        await lifecycle.gracefulShutdown();
+        await exit(0);
+      },
+    });
+    lifecycle.setCleanupInteraction(cleanupInteraction);
+
+    await restoreWindowPosition(core.storage);
+    await syncAutoStart(core.storage);
+
+    lifecycle.setUnlistenAutostart(
+      listen('tray:toggle-autostart', async () => {
+        try {
+          const enabled = await isEnabled();
+          if (enabled) {
+            await disable();
+            await core.storage.setPreferences({ autoStartEnabled: false });
+          } else {
+            await enable();
+            await core.storage.setPreferences({ autoStartEnabled: true });
+          }
+        } catch (e) {
+          console.warn('切换自启动失败:', e);
+        }
+      }),
     );
 
-    // ─── 气泡系统 ───
-    const bubble = new BubbleManager();
-    await bubble.init();
+    lifecycle.setUnlistenMemories(
+      listen('tray:open-memories', async () => {
+        try {
+          await features.memoryPanel.showPanel();
+        } catch (e) {
+          console.warn('打开回忆面板失败:', e);
+        }
+      }),
+    );
 
-    // ─── v0.3.0: 新增核心模块 ───
-    const storage = new StorageService();
-    const dialogue = new DialogueEngine(DIALOGUE_ENTRIES);
-    const effects = new EffectsManager();
-
-    // ─── v0.4.0: 记忆系统 ───
-    const memory = new MemorySystem(bus, storage);
-
-    // ─── 功能模块 ───
-    const idleCare = new IdleCareScheduler(bus, bubble, dialogue, memory);
-    const hourlyChime = new HourlyChime(bubble, dialogue, storage);
-    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue);
-    const systemMonitor = new SystemMonitor(bubble, storage);
-    const contextAwareness = new ContextAwareness(bus, bubble, dialogue, storage);
-
-    // ─── v0.5.0: 特殊日期 + 时段问候 ───
-    const specialDates = new SpecialDateManager(bubble, dialogue, effects, storage);
-    const greeting = new GreetingManager(bubble, dialogue, effects);
-
-    // 点击宠物 → 对话引擎选取台词 + 粒子特效
-    bus.on('pet:clicked', () => {
-      bubble.say({ text: dialogue.getLine('click'), priority: 'normal' });
-      // 随机播放心形或星星特效
-      if (Math.random() > 0.5) {
-        effects.playHearts();
-      } else {
-        effects.playSparks();
+    const autoSaveTimer = window.setInterval(async () => {
+      try {
+        await core.memory.save();
+        await core.storage.save();
+      } catch (e) {
+        console.warn('自动保存失败:', e);
       }
-      // 记录交互
-      storage.incrementInteraction();
-    });
+    }, getAutoSaveIntervalMs());
+    lifecycle.setAutoSaveTimer(autoSaveTimer);
 
-    // 行为上下文变更 → 播放对应特效
-    bus.on('context:changed', ({ to }) => {
-      effects.playForContext(to);
-    });
+    lifecycle.setUnlistenRequestQuit(
+      listen('app:request-quit', async () => {
+        await lifecycle.gracefulShutdown();
+        try {
+          await emit('app:shutdown-complete', {});
+        } catch {
+          // ignore
+        }
+        await exit(0);
+      }),
+    );
 
-    // 番茄钟开始 → 弹跳特效
-    bus.on('pomodoro:focus', () => {
-      effects.playBounce();
-    });
+    await startModules(core, features);
+    await runDailyStartupFlow(core, features);
 
-    // 记忆系统洞察 → 反思性对话（v0.4.0）
-    bus.on('memory:insight', ({ type }) => {
-      const scene = `reflective_${type}` as import('./features/dialogue-engine').DialogueScene;
-      const snapshot = memory.getSnapshot();
-      const line = dialogue.getLine(scene, { hour: new Date().getHours(), ...snapshot });
-      if (line !== '啾啾！') {
-        bubble.say({ text: line, priority: 'high', duration: 6000 });
-      }
-    });
-
-    const updater = new UpdateController({
-      overlay: document.getElementById('update-overlay') as HTMLDivElement,
-      message: document.getElementById('update-message') as HTMLDivElement,
-      version: document.getElementById('update-version') as HTMLDivElement,
-      progressWrap: document.getElementById('update-progress-wrap') as HTMLDivElement,
-      progressBar: document.getElementById('update-progress-bar') as HTMLDivElement,
-      progressText: document.getElementById('update-progress-text') as HTMLDivElement,
-      btnNow: document.getElementById('btn-update-now') as HTMLButtonElement,
-      btnLater: document.getElementById('btn-update-later') as HTMLButtonElement,
-      btnSkip: document.getElementById('btn-update-skip') as HTMLButtonElement,
-    });
-
-    // ─── 菜单项配置 ───
-    /** 动态更新番茄钟菜单项文字 */
-    const updatePomodoroLabel = () => {
-      const el = document.querySelector('[data-id="pomodoro"]');
-      if (el) el.textContent = pomodoro.getStatusLabel();
-    };
-
-    const menuItems: MenuItem[] = [
-      {
-        type: 'action', id: 'idle', label: '▶ 待机（idle）',
-        handler: () => { animation.play('idle'); menu.closeMenu(); },
-      },
-      {
-        type: 'action', id: 'look', label: '👀 左右张望（look）',
-        handler: () => { animation.play('look'); menu.closeMenu(); },
-      },
-      {
-        type: 'action', id: 'tilt', label: '🙂 歪头（tilt）',
-        handler: () => { animation.play('tilt'); menu.closeMenu(); },
-      },
-      { type: 'separator', id: 'sep-anim' },
-      {
-        type: 'command', id: 'pomodoro', label: '🍅 番茄钟',
-        handler: async () => {
-          await menu.closeMenu();
-          if (pomodoro.state === 'idle') {
-            pomodoro.start();
-          } else {
-            pomodoro.stop();
-          }
-        },
-      },
-      { type: 'separator', id: 'sep-tools' },
-      {
-        type: 'command', id: 'check-update', label: '🔄 检查更新',
-        handler: async () => { await menu.closeMenu(); await updater.check(true); },
-      },
-      {
-        type: 'command', id: 'toggle-through', label: '🖱 切换点击穿透',
-        handler: async () => {
-          await menu.closeMenu();
-          await new Promise(r => setTimeout(r, 100));
-          await clickThrough.toggle();
-        },
-      },
-      {
-        type: 'command', id: 'quit', label: '⛔ 退出',
-        handler: async () => { await unregisterAll(); await exit(0); },
-      },
-    ];
-    menu.setItems(menuItems);
-
-    // 菜单打开时刷新番茄钟状态
-    bus.on('menu:opened', updatePomodoroLabel);
-
-    // ─── 交互初始化 ───
-    const cleanupInteraction = setupInteraction({
-      canvas, app, animation, clickThrough, menu, bus,
-    });
-
-    // ─── 启动动画 & 功能模块 ───
-    animation.start();
-    await memory.start(); // 记忆系统需优先启动（加载历史数据）
-    idleCare.start();
-    await hourlyChime.start();
-    await systemMonitor.start();
-    await contextAwareness.start();
-
-    // ─── v0.5.0: 首次启动检测 + 特殊日期 + 时段问候 ───
-    const lastActiveDate = await storage.get<string>(STORE_KEYS.LAST_ACTIVE_DATE, '');
-    const today = getLocalDateKey();
-    const isFirstLaunchToday = lastActiveDate !== today;
-
-    // 记录今日活跃（放在检测之后，确保比较的是昨天的值）
-    storage.recordActivity();
-
-    // 延迟 3 秒启动特殊日期检查（等气泡系统完全就绪）
-    setTimeout(async () => {
-      await specialDates.checkToday();
-      // 问候在特殊日期之后 2 秒触发（避免重叠）
-      setTimeout(() => greeting.checkGreeting(isFirstLaunchToday), 2000);
-    }, 3000);
-
-    // ─── 生命周期 ───
-    window.addEventListener('beforeunload', async () => {
-      cleanupInteraction();
-      idleCare.stop();
-      hourlyChime.stop();
-      pomodoro.stop();
-      systemMonitor.stop();
-      contextAwareness.destroy();
-      memory.stop();
-      await memory.save();
-      await storage.save();
-      await bubble.dispose();
-      bus.dispose();
-      await unregisterAll();
-    });
-
-    // 静默检查更新（2 秒后，不阻塞主流程）
-    setTimeout(() => updater.check(false), 2000);
+    setTimeout(() => {
+      void core.updater.check(false);
+    }, 2000);
   } catch (e) {
     console.error('启动失败:', e);
     showHint('启动失败：打开控制台查看详情', 3000);

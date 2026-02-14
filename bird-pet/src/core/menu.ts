@@ -39,11 +39,7 @@ export class MenuController {
     return this._open;
   }
 
-  constructor(
-    menu: HTMLDivElement,
-    bus: EventBus<AppEvents>,
-    clickThrough: ClickThroughManager,
-  ) {
+  constructor(menu: HTMLDivElement, bus: EventBus<AppEvents>, clickThrough: ClickThroughManager) {
     this.menu = menu;
     this.bus = bus;
     this.clickThrough = clickThrough;
@@ -58,7 +54,7 @@ export class MenuController {
 
   /** 在指定 id 的菜单项之前插入新项 */
   addItemBefore(item: MenuItem, beforeId: string): void {
-    const idx = this.items.findIndex(i => i.id === beforeId);
+    const idx = this.items.findIndex((i) => i.id === beforeId);
     if (idx >= 0) {
       this.items.splice(idx, 0, item);
     } else {
@@ -81,7 +77,7 @@ export class MenuController {
       this._open = true;
 
       // 等待浏览器重排
-      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
       this.menu.style.left = `${CONFIG.MENU_PADDING}px`;
       this.menu.style.top = `${CONFIG.MENU_PADDING}px`;
 
@@ -119,7 +115,7 @@ export class MenuController {
 
   private render(): void {
     this.menu.innerHTML = this.items
-      .map(item => {
+      .map((item) => {
         if (item.type === 'separator') {
           return '<div class="menu-sep"></div>';
         }
@@ -142,12 +138,12 @@ export class MenuController {
       if (!el || el.classList.contains('disabled')) return;
 
       const id = el.dataset.id;
-      const item = this.items.find(i => i.id === id);
+      const item = this.items.find((i) => i.id === id);
       if (!item?.handler) return;
 
       // 禁用所有菜单项防止重复点击
       const allItems = this.menu.querySelectorAll('.menu-item');
-      allItems.forEach(i => i.classList.add('disabled'));
+      allItems.forEach((i) => i.classList.add('disabled'));
 
       try {
         await item.handler();
@@ -155,7 +151,7 @@ export class MenuController {
         console.error('菜单操作失败:', error);
         showHint('操作失败', 2000);
       } finally {
-        allItems.forEach(i => i.classList.remove('disabled'));
+        allItems.forEach((i) => i.classList.remove('disabled'));
       }
     });
   }

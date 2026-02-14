@@ -151,7 +151,7 @@ export class EffectsManager {
 
       // 随机位置（在 150×150 窗口内偏移）
       const x = 20 + Math.random() * 110; // 20-130px
-      const y = 10 + Math.random() * 60;  // 10-70px（偏上方）
+      const y = 10 + Math.random() * 60; // 10-70px（偏上方）
       span.style.left = `${x}px`;
       span.style.top = `${y}px`;
 
@@ -161,10 +161,17 @@ export class EffectsManager {
 
       this.container.appendChild(span);
 
-      // 动画结束后自动移除
-      span.addEventListener('animationend', () => span.remove(), { once: true });
       // 兜底移除（防止 animationend 未触发）
-      setTimeout(() => span.remove(), duration + 500);
+      const fallbackTimer = setTimeout(() => span.remove(), duration + 500);
+      // 动画结束后自动移除，并清理兜底定时器
+      span.addEventListener(
+        'animationend',
+        () => {
+          clearTimeout(fallbackTimer);
+          span.remove();
+        },
+        { once: true },
+      );
     }
   }
 }

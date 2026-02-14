@@ -17,34 +17,34 @@ import type { DialogueEntry } from './dialogue-engine';
 
 const CLICK_LINES = [
   '嘿嘿！干嘛戳我呀？😆',
-  '被发现了！我在偷偷看你工作~',
-  '啾啾！你好呀！💕',
+  '被发现了！我在偷偷看{nickname}工作~',
+  '啘啘！{nickname}你好呀！💕',
   '再戳就要生气啦…才怪！嘻嘻',
   '有什么好事要告诉我吗？',
   '摸摸头～感觉元气满满！✨',
-  '哇！你的手好暖和！',
-  '今天的你也很棒哦！💪',
+  '哇！{nickname}的手好暖和！',
+  '今天的{nickname}也很棒哦！💪',
   '我可是很忙的！（其实在发呆）',
-  '啾～需要我帮忙吗？',
-  '我在守护你的工作哦！🛡️',
+  '啘～需要我帮忙吗？',
+  '我在守护{nickname}的工作哦！🛡️',
   '突然被戳…好害羞！',
-  '嘿！别闹～我在思考鸟生大事呢！',
-  '戳戳戳…你是不是无聊了？陪你玩！',
+  '嘶！别闹～我在思考鸟生大事呢！',
+  '戳戳戳…{nickname}是不是无聊了？陪你玩！',
   '又来啦？今天想听什么呀？',
-  '你的指尖好温柔～再来一次嘛！',
+  '{nickname}的指尖好温柔～再来一次嘛！',
 ];
 
 const IDLE_CARE_LINES = [
-  '坐了很久啦，起来活动活动吧！💪',
-  '嘿！该伸个懒腰了～身体很重要哦！',
-  '喝口水吧！今天喝够 8 杯了吗？💧',
+  '{nickname}坐了很久啦，起来活动活动吧！💪',
+  '嘶！{nickname}该伸个懒腰了～身体很重要哦！',
+  '{nickname}喝口水吧！今天喝够 8 杯了吗？💧',
   '眼睛累了吧？看看远处休息一下～👀',
-  '站起来走两步吧！我在这里等你回来！',
+  '站起来走两步吧！我在这里等{nickname}回来！',
   '深呼吸三次试试？会感觉好很多哦～🌬️',
-  '记得放松一下肩膀！别太紧绷了～',
+  '记得放松一下肩膀！{nickname}别太紧绷了～',
   '休息一下下，回来效率更高哦！',
-  '转转脖子、甩甩手！身体会感谢你的～',
-  '窗外的风景很美哦，要不要去看看？🌿',
+  '转转脖子、甩甩手！身体会感谢{nickname}的～',
+  '窗外的风景很美哦，{nickname}要不要去看看？🌿',
   '久坐对腰不好！站起来扭扭腰～',
 ];
 
@@ -72,13 +72,13 @@ const POMODORO_RESUME_LINES = [
 ];
 
 const AFFIRMATION_LINES = [
-  '其实你已经做得很棒了！别给自己太大压力～',
+  '其实{nickname}已经做得很棒了！别给自己太大压力～',
   '一步一步来，慢慢的也是进步！🌱',
-  '记住：你值得所有好的事情！✨',
-  '不管结果如何，努力的你最帅了！',
-  '今天也辛苦了！我一直在你旁边哦～',
-  '你有没有被夸过？你真的很厉害！',
-  '世界上只有一个你，独一无二的你！🌟',
+  '记住：{nickname}值得所有好的事情！✨',
+  '不管结果如何，努力的{nickname}最帅了！',
+  '今天也辛苦了！我一直在{nickname}旁边哦～',
+  '{nickname}有没有被夸过？你真的很厉害！',
+  '世界上只有一个{nickname}，独一无二的你！🌟',
 ];
 
 // ────────────────────────────────────────
@@ -154,46 +154,118 @@ const CONTEXT_IDLE_LINES = [
 // ────────────────────────────────────────
 
 export const DIALOGUE_ENTRIES: DialogueEntry[] = [
-  { scene: 'click',           lines: CLICK_LINES },
-  { scene: 'idle_care',       lines: IDLE_CARE_LINES },
-  { scene: 'affirmation',     lines: AFFIRMATION_LINES },
-  { scene: 'pomodoro_start',  lines: POMODORO_START_LINES },
-  { scene: 'pomodoro_break',  lines: POMODORO_BREAK_LINES },
+  { scene: 'click', lines: CLICK_LINES },
+  { scene: 'idle_care', lines: IDLE_CARE_LINES },
+  { scene: 'affirmation', lines: AFFIRMATION_LINES },
+  { scene: 'pomodoro_start', lines: POMODORO_START_LINES },
+  { scene: 'pomodoro_break', lines: POMODORO_BREAK_LINES },
   { scene: 'pomodoro_resume', lines: POMODORO_RESUME_LINES },
 
   // 整点报时台词（按小时段分组）
   { scene: 'hourly', lines: ['午夜了！🌙 早点休息好不好？'], conditions: { hourRange: [0, 1] } },
-  { scene: 'hourly', lines: ['凌晨 1 点了…你还在忙吗？注意身体！'], conditions: { hourRange: [1, 2] } },
+  {
+    scene: 'hourly',
+    lines: ['凌晨 1 点了…你还在忙吗？注意身体！'],
+    conditions: { hourRange: [1, 2] },
+  },
   { scene: 'hourly', lines: ['凌晨 2 点！真的该睡了！😴'], conditions: { hourRange: [2, 3] } },
   { scene: 'hourly', lines: ['凌晨 3 点…拜托，快去睡觉！'], conditions: { hourRange: [3, 4] } },
-  { scene: 'hourly', lines: ['天快亮了！如果还没睡…现在还来得及！'], conditions: { hourRange: [4, 5] } },
-  { scene: 'hourly', lines: ['早上 5 点～起这么早？好勤奋！🌅'], conditions: { hourRange: [5, 6] } },
-  { scene: 'hourly', lines: ['6 点啦！早安！新的一天开始了！☀️'], conditions: { hourRange: [6, 7] } },
+  {
+    scene: 'hourly',
+    lines: ['天快亮了！如果还没睡…现在还来得及！'],
+    conditions: { hourRange: [4, 5] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['早上 5 点～起这么早？好勤奋！🌅'],
+    conditions: { hourRange: [5, 6] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['6 点啦！早安！新的一天开始了！☀️'],
+    conditions: { hourRange: [6, 7] },
+  },
   { scene: 'hourly', lines: ['早上 7 点！吃早餐了吗？🥐'], conditions: { hourRange: [7, 8] } },
   { scene: 'hourly', lines: ['8 点！元气满满地开始工作吧！💪'], conditions: { hourRange: [8, 9] } },
   { scene: 'hourly', lines: ['上午 9 点～专注时间到！加油！'], conditions: { hourRange: [9, 10] } },
-  { scene: 'hourly', lines: ['10 点啦！状态正好，继续冲！🔥'], conditions: { hourRange: [10, 11] } },
-  { scene: 'hourly', lines: ['11 点了～再坚持一下就到午饭时间了！'], conditions: { hourRange: [11, 12] } },
-  { scene: 'hourly', lines: ['中午 12 点！午餐时间！🍱 好好吃饭哦！'], conditions: { hourRange: [12, 13] } },
-  { scene: 'hourly', lines: ['下午 1 点～饭后适当休息一下吧！'], conditions: { hourRange: [13, 14] } },
-  { scene: 'hourly', lines: ['下午 2 点！最容易犯困的时候，精神！💥'], conditions: { hourRange: [14, 15] } },
-  { scene: 'hourly', lines: ['下午 3 点～来杯下午茶提提神？☕'], conditions: { hourRange: [15, 16] } },
-  { scene: 'hourly', lines: ['下午 4 点！冲刺时间！目标快达成了！'], conditions: { hourRange: [16, 17] } },
-  { scene: 'hourly', lines: ['5 点啦！今天的任务完成了吗？📋'], conditions: { hourRange: [17, 18] } },
-  { scene: 'hourly', lines: ['傍晚 6 点～辛苦了！该放松一下啦！🌇'], conditions: { hourRange: [18, 19] } },
-  { scene: 'hourly', lines: ['晚上 7 点！享受晚餐和自由时光吧！'], conditions: { hourRange: [19, 20] } },
-  { scene: 'hourly', lines: ['晚上 8 点～做些自己喜欢的事吧！🎮'], conditions: { hourRange: [20, 21] } },
-  { scene: 'hourly', lines: ['晚上 9 点！今天过得怎么样？😊'], conditions: { hourRange: [21, 22] } },
-  { scene: 'hourly', lines: ['晚上 10 点了～差不多该准备休息啦！🌛'], conditions: { hourRange: [22, 23] } },
-  { scene: 'hourly', lines: ['晚上 11 点！别熬夜哦，早睡早起！💤'], conditions: { hourRange: [23, 24] } },
+  {
+    scene: 'hourly',
+    lines: ['10 点啦！状态正好，继续冲！🔥'],
+    conditions: { hourRange: [10, 11] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['11 点了～再坚持一下就到午饭时间了！'],
+    conditions: { hourRange: [11, 12] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['中午 12 点！午餐时间！🍱 好好吃饭哦！'],
+    conditions: { hourRange: [12, 13] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 1 点～饭后适当休息一下吧！'],
+    conditions: { hourRange: [13, 14] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 2 点！最容易犯困的时候，精神！💥'],
+    conditions: { hourRange: [14, 15] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 3 点～来杯下午茶提提神？☕'],
+    conditions: { hourRange: [15, 16] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 4 点！冲刺时间！目标快达成了！'],
+    conditions: { hourRange: [16, 17] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['5 点啦！今天的任务完成了吗？📋'],
+    conditions: { hourRange: [17, 18] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['傍晚 6 点～辛苦了！该放松一下啦！🌇'],
+    conditions: { hourRange: [18, 19] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 7 点！享受晚餐和自由时光吧！'],
+    conditions: { hourRange: [19, 20] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 8 点～做些自己喜欢的事吧！🎮'],
+    conditions: { hourRange: [20, 21] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 9 点！今天过得怎么样？😊'],
+    conditions: { hourRange: [21, 22] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 10 点了～差不多该准备休息啦！🌛'],
+    conditions: { hourRange: [22, 23] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 11 点！别熬夜哦，早睡早起！💤'],
+    conditions: { hourRange: [23, 24] },
+  },
 
   // 行为感知台词
-  { scene: 'context_coding',   lines: CONTEXT_CODING_LINES },
+  { scene: 'context_coding', lines: CONTEXT_CODING_LINES },
   { scene: 'context_browsing', lines: CONTEXT_BROWSING_LINES },
-  { scene: 'context_gaming',   lines: CONTEXT_GAMING_LINES },
-  { scene: 'context_music',    lines: CONTEXT_MUSIC_LINES },
-  { scene: 'context_meeting',  lines: CONTEXT_MEETING_LINES },
-  { scene: 'context_idle',     lines: CONTEXT_IDLE_LINES },
+  { scene: 'context_gaming', lines: CONTEXT_GAMING_LINES },
+  { scene: 'context_music', lines: CONTEXT_MUSIC_LINES },
+  { scene: 'context_meeting', lines: CONTEXT_MEETING_LINES },
+  { scene: 'context_idle', lines: CONTEXT_IDLE_LINES },
 
   // ────────────────────────────────────────
   // 反思性对话台词（v0.4.0 记忆系统驱动）
@@ -203,10 +275,10 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'reflective_sleep',
     lines: [
-      '又是深夜了呢…你最近总是很晚睡 🌙 要注意休息哦',
-      '连续几天熬夜了，身体会抗议的！早点休息吧 💤',
-      '夜猫子～虽然夜晚很安静很适合工作，但身体更重要！',
-      '我发现你最近都好晚才休息…要不要试试早点睡？🌟',
+      '又是深夜了呢…{nickname}最近总是很晚睡 🌙 要注意休息哦',
+      '连续几天熬夜了，{nickname}的身体会抗议的！早点休息吧 💤',
+      '夜猫子{nickname}～虽然夜晚很安静很适合工作，但身体更重要！',
+      '我发现{nickname}最近都好晚才休息…要不要试试早点睡？🌟',
     ],
     conditions: { sleepPattern: 'night_owl' },
   },
@@ -225,18 +297,18 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'reflective_streak',
     lines: [
-      '我们已经连续 {streak} 天在一起了！啾啾～ 💕',
-      '每天都能见到你好开心！连续 {streak} 天了呢！',
-      '第 {streak} 天！感觉和你更亲近了～',
+      '我们已经连续 {streak} 天在一起了！{nickname}～ 💕',
+      '每天都能见到{nickname}好开心！连续 {streak} 天了呢！',
+      '第 {streak} 天！感觉和{nickname}更亲近了～',
     ],
     conditions: { streak: { min: 3 } },
   },
   {
     scene: 'reflective_streak',
     lines: [
-      '一整周都没有分开过！我们是最好的搭档 🌟',
+      '一整周都没有分开过！{nickname}和我是最好的搭档 🌟',
       '连续 {streak} 天！这是属于我们的小小里程碑 🏆',
-      '已经一周了！谢谢你每天都来看我 💖',
+      '已经一周了！谢谢{nickname}每天都来看我 💖',
     ],
     conditions: { streak: { min: 7 } },
   },
@@ -244,10 +316,7 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   // 亲密度反思
   {
     scene: 'reflective_affinity',
-    lines: [
-      '感觉和你越来越熟了呢～嘿嘿 😊',
-      '我们的互动越来越多了！好开心～',
-    ],
+    lines: ['感觉和你越来越熟了呢～嘿嘿 😊', '我们的互动越来越多了！好开心～'],
     conditions: { affinityLevel: 2 },
   },
   {
@@ -273,9 +342,9 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'reflective_app_habit',
     lines: [
-      '你真的很喜欢写代码呢！是在做什么有趣的项目？💻',
-      '最近写了好多代码！你一定是个很厉害的程序员 🌟',
-      '代码世界的冒险家！我一直在旁边为你加油！',
+      '{nickname}真的很喜欢写代码呢！是在做什么有趣的项目？💻',
+      '最近写了好多代码！{nickname}一定是个很厉害的程序员 🌟',
+      '代码世界的冒险家！我一直在旁边为{nickname}加油！',
     ],
     conditions: { dominantApp: 'coding' },
   },
@@ -299,10 +368,7 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   },
   {
     scene: 'reflective_app_habit',
-    lines: [
-      '最近冲浪好多！看到什么有趣的东西了吗？🌐',
-      '互联网探索家！有什么新发现要分享吗？',
-    ],
+    lines: ['最近冲浪好多！看到什么有趣的东西了吗？🌐', '互联网探索家！有什么新发现要分享吗？'],
     conditions: { dominantApp: 'browsing' },
   },
 
@@ -314,11 +380,11 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'special_birthday',
     lines: [
-      '生日快乐！🎂✨ 今天你是全世界最闪亮的小太阳！',
-      '🎉 今天是你的大日子！希望每一天都像今天一样快乐！',
-      '生日快乐呀！吹蜡烛的时候记得许个愿哦～🕯️💫',
-      '哇！今天是你的生日耶！蛋糕🍰、礼物🎁、还有我的祝福，统统给你！',
-      '全宇宙最特别的人，生日快乐！🌟 今天你想做什么都可以！',
+      '{nickname}生日快乐！🎂✨ 今天你是全世界最闪亮的小太阳！',
+      '🎉 今天是{nickname}的大日子！希望每一天都像今天一样快乐！',
+      '{nickname}生日快乐呀！吹蜡烛的时候记得许个愿哦～🕯️💫',
+      '哇！今天是{nickname}的生日耶！蛋糕🍰、礼物🎁、还有我的祝福，统统给你！',
+      '全宇宙最特别的{nickname}，生日快乐！🌟 今天你想做什么都可以！',
     ],
   },
 
@@ -329,7 +395,7 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
       '情人节快乐！💕 今天的空气里都是甜甜的味道～',
       '2月14日！爱你的心每天都在，今天特别多一点 💝',
       '情人节到啦！🌹 不管多忙，记得感受身边的爱哦！',
-      'Happy Valentine\'s Day！💌 你值得世界上所有的温柔～',
+      "Happy Valentine's Day！💌 你值得世界上所有的温柔～",
       '今天是表达爱的日子！我先来：啾啾！超喜欢你！💗',
     ],
   },
@@ -360,10 +426,22 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'special_520',
     lines: [
-      '520！今天是个特别的日子～我爱你 💕',
-      '5月20日！我要大声说：超——喜——欢——你！💗',
-      '520 快乐！你是我最珍贵的存在 🌻✨',
-      '今天是 520 呢！爱你每一天，不止今天 💝',
+      '520！今天是个特别的日子～我爱{nickname} 💕',
+      '5月20日！我要大声说：超——喜——欢——{nickname}！💗',
+      '520 快乐！{nickname}是我最珍贵的存在 🌻✨',
+      '今天是 520 呢！爱{nickname}每一天，不止今天 💝',
+    ],
+  },
+
+  // 认识纪念日（1月20日）—— v1.0.0
+  {
+    scene: 'special_anniversary',
+    lines: [
+      '今天是我们认识的纪念日！🎉 认识{nickname}是我最幸运的事！',
+      '又到了这个特别的日子～谢谢{nickname}一直陪着我 💖',
+      '认识{nickname}已经 {daysSinceMet} 天了！每一天都很珍贵 ✨',
+      '纪念日快乐！🌟 我会一直一直陪在{nickname}身边的！',
+      '今天是我们的纪念日！从认识到现在…每一天都充满感激 💗',
     ],
   },
 
@@ -376,11 +454,11 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
     scene: 'greeting_morning',
     lines: [
       '早上好呀！☀️ 今天也要元气满满哦！',
-      '早安～新的一天开始啦！先喝杯水吧 💧',
-      '早起的鸟儿有虫吃！你今天起得真棒 🐦☀️',
-      '嘿！早安！今天的你一定会很棒的！✨',
+      '{nickname}早安～新的一天开始啦！先喝杯水吧 💧',
+      '早起的鸟儿有虫吃！{nickname}今天起得真棒 🐦☀️',
+      '嘶！{nickname}早安！今天的你一定会很棒的！✨',
       '太阳出来啦～我也醒啦！早早早！🌅',
-      '早上好！昨晚睡得好吗？今天要加油哦 💪',
+      '{nickname}早上好！昨晚睡得好吗？今天要加油哦 💪',
     ],
   },
 
@@ -412,12 +490,12 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'greeting_night',
     lines: [
-      '晚安～🌙 今天辛苦了，好好休息吧！',
-      '夜深了，早点睡哦！明天又是美好的一天 💤',
-      '晚安！今天的你也很棒，做个好梦 🌟',
-      '月亮出来了～🌛 该放下手机休息啦～',
+      '{nickname}晚安～🌙 今天辛苦了，好好休息吧！',
+      '夜深了，{nickname}早点睡哦！明天又是美好的一天 💤',
+      '晚安！今天的{nickname}也很棒，做个好梦 🌟',
+      '月亮出来了～🌛 {nickname}该放下手机休息啦～',
       '一天结束了！带着满足入睡吧，晚安 💫',
-      '该睡觉啦！我帮你暖被窝好不好？😴',
+      '该睡觉啦！我帮{nickname}暖被窝好不好？😴',
     ],
   },
 
@@ -425,11 +503,11 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   {
     scene: 'greeting_latenight',
     lines: [
-      '都这个点了还不睡呀…🌙 我有点担心你',
-      '深夜了…你还好吗？不管在忙什么，身体最重要哦 💫',
-      '嘘…这么晚了，我陪你，但你要答应我快点睡 🤫',
-      '凌晨几点了你知道吗…快去睡觉！明天还要加油呢 😴',
-      '夜猫子～虽然夜晚很安静，但身体会抗议的哦 🌙',
+      '都这个点了{nickname}还不睡呀…🌙 我有点担心你',
+      '深夜了…{nickname}你还好吗？不管在忙什么，身体最重要哦 💫',
+      '嘘…这么晚了，我陪{nickname}，但你要答应我快点睡 🤫',
+      '凌晨几点了{nickname}知道吗…快去睡觉！明天还要加油呢 😴',
+      '夜猫子{nickname}～虽然夜晚很安静，但身体会抗议的哦 🌙',
     ],
   },
 ];

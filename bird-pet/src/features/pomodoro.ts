@@ -8,8 +8,10 @@
 import type { AppEvents } from '../types';
 import type { EventBus } from '../events';
 import type { BubbleManager } from '../core/bubble-manager';
+import { STORE_KEYS, type StorageService } from '../core/storage';
 import type { HourlyChime } from './hourly-chime';
 import type { DialogueEngine } from './dialogue-engine';
+import { getLocalDateKey } from '../utils';
 
 /** 专注时长（毫秒）= 25 分钟 */
 const FOCUS_DURATION = 25 * 60 * 1000;
@@ -23,6 +25,7 @@ export class PomodoroTimer {
   private bubble: BubbleManager;
   private hourlyChime: HourlyChime;
   private dialogue: DialogueEngine;
+  private storage: StorageService;
 
   private _state: PomodoroState = 'idle';
   private timer: number | null = null;
@@ -52,15 +55,18 @@ export class PomodoroTimer {
     bubble: BubbleManager,
     hourlyChime: HourlyChime,
     dialogue: DialogueEngine,
+    storage: StorageService,
   ) {
     this._bus = bus;
     this.bubble = bubble;
     this.hourlyChime = hourlyChime;
     this.dialogue = dialogue;
+    this.storage = storage;
   }
 
   /** 开始/重启番茄钟 */
-  start(): void {
+  async start(): Promise<void> {
+    await this.loadPersistedCount();
     this.clearTimer();
     this._state = 'focus';
     this.startedAt = Date.now();
@@ -71,16 +77,17 @@ export class PomodoroTimer {
       priority: 'high',
       duration: 3000,
     });
-    this.timer = window.setTimeout(() => this.onFocusEnd(), FOCUS_DURATION);
+    this.timer = setTimeout(() => this.onFocusEnd(), FOCUS_DURATION);
   }
 
   /** 停止番茄钟 */
-  stop(): void {
+  async stop(): Promise<void> {
     this.clearTimer();
     this._state = 'idle';
     this._bus.emit('pomodoro:stop');
     this.hourlyChime.setEnabled(true); // 恢复整点报时
     this.bubble.sayText('番茄钟已停止！今天完成了 ' + this.completedCount + ' 个 🍅');
+    await this.persistState();
   }
 
   /** 获取状态标签（用于菜单显示） */
@@ -98,6 +105,7 @@ export class PomodoroTimer {
 
   private onFocusEnd(): void {
     this.completedCount++;
+    void this.persistState();
     this._state = 'break';
     this.startedAt = Date.now();
     this._bus.emit('pomodoro:break');
@@ -107,7 +115,7 @@ export class PomodoroTimer {
       priority: 'high',
       duration: 4000,
     });
-    this.timer = window.setTimeout(() => this.onBreakEnd(), BREAK_DURATION);
+    this.timer = setTimeout(() => this.onBreakEnd(), BREAK_DURATION);
   }
 
   private onBreakEnd(): void {
@@ -120,13 +128,42 @@ export class PomodoroTimer {
       priority: 'high',
       duration: 3000,
     });
-    this.timer = window.setTimeout(() => this.onFocusEnd(), FOCUS_DURATION);
+    this.timer = setTimeout(() => this.onFocusEnd(), FOCUS_DURATION);
   }
 
   private clearTimer(): void {
     if (this.timer !== null) {
       clearTimeout(this.timer);
       this.timer = null;
+    }
+  }
+
+  private async loadPersistedCount(): Promise<void> {
+    try {
+      const today = getLocalDateKey();
+      const persistedDate = await this.storage.get<string>(STORE_KEYS.POMODORO_DATE, '');
+
+      if (persistedDate !== today) {
+        this.completedCount = 0;
+        await this.storage.set(STORE_KEYS.POMODORO_DATE, today);
+        await this.storage.set(STORE_KEYS.POMODORO_COUNT, 0);
+        return;
+      }
+
+      this.completedCount = await this.storage.get<number>(STORE_KEYS.POMODORO_COUNT, 0);
+    } catch (e) {
+      this.completedCount = 0;
+      console.warn('读取番茄持久化状态失败，使用默认值:', e);
+    }
+  }
+
+  private async persistState(): Promise<void> {
+    try {
+      const today = getLocalDateKey();
+      await this.storage.set(STORE_KEYS.POMODORO_DATE, today);
+      await this.storage.set(STORE_KEYS.POMODORO_COUNT, this.completedCount);
+    } catch (e) {
+      console.warn('保存番茄持久化状态失败:', e);
     }
   }
 }

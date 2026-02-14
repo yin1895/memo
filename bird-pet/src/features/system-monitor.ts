@@ -30,6 +30,7 @@ const FIRST_CHECK_DELAY = 15 * 1000;
 export class SystemMonitor {
   private bubble: BubbleManager;
   private storage: StorageService | null;
+  private delayTimer: number | null = null;
   private timer: number | null = null;
   private lastAlertAt = 0;
 
@@ -40,12 +41,16 @@ export class SystemMonitor {
 
   /** 启动系统监控轮询 */
   async start(): Promise<void> {
+    // 防重入：先清理可能存在的旧定时器
+    this.stop();
+
     if (this.storage) {
       const prefs = await this.storage.getPreferences();
       if (!prefs.systemMonitorEnabled) return;
     }
     // 首次延迟检查（让 Rust 端 CPU 基线稳定）
-    setTimeout(() => {
+    this.delayTimer = window.setTimeout(() => {
+      this.delayTimer = null;
       this.poll();
       this.timer = window.setInterval(() => this.poll(), POLL_INTERVAL);
     }, FIRST_CHECK_DELAY);
@@ -53,6 +58,10 @@ export class SystemMonitor {
 
   /** 停止监控 */
   stop(): void {
+    if (this.delayTimer !== null) {
+      clearTimeout(this.delayTimer);
+      this.delayTimer = null;
+    }
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;

@@ -17,6 +17,8 @@ export const CONFIG = {
 } as const;
 
 /** 平台检测 */
-export const IS_MAC = (navigator as any).userAgentData?.platform?.toUpperCase()?.includes('MAC')
-  ?? navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+const runtimeNavigator: (Navigator & { userAgentData?: { platform?: string } }) | null =
+  typeof navigator !== 'undefined' ? navigator : null;
+const platformHint = runtimeNavigator?.userAgentData?.platform ?? runtimeNavigator?.userAgent ?? '';
+export const IS_MAC = /mac/i.test(platformHint);
 export const MODIFIER_KEY = IS_MAC ? '⌘' : 'Ctrl';

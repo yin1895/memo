@@ -1,0 +1,231 @@
+/**
+ * 回忆面板 CSS
+ * 温暖渐变风格，展示用户与小鸟的互动历史
+ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #fef9ef 0%, #fde8d0 50%, #fce4ec 100%);
+  color: #5d4037;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#memory-panel-app {
+  padding: 20px 16px;
+  min-height: 100vh;
+}
+
+/* ─── 头部 ─── */
+.panel-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.panel-icon {
+  font-size: 28px;
+}
+
+.panel-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-left: 8px;
+  background: linear-gradient(90deg, #ff8a65, #f06292);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ─── 通用区块 ─── */
+.panel-section {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  backdrop-filter: blur(6px);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #6d4c41;
+}
+
+/* ─── 亲密度 ─── */
+.affinity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.affinity-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e65100;
+}
+
+.affinity-hearts {
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.affinity-bar-wrap {
+  width: 100%;
+  height: 10px;
+  background: #f3e5d8;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.affinity-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ffab91, #ff5722);
+  border-radius: 5px;
+  transition: width 0.8s ease;
+}
+
+.affinity-progress-text {
+  font-size: 11px;
+  color: #8d6e63;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* ─── 统计卡片 ─── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 10px 6px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e65100;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #8d6e63;
+  margin-top: 2px;
+}
+
+/* ─── 7 天热力 ─── */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.heatmap-day {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  background: #f5e6d8;
+  transition: background 0.3s;
+}
+
+.heatmap-day .day-label {
+  font-size: 10px;
+  color: #8d6e63;
+  display: block;
+}
+
+.heatmap-day .day-count {
+  font-size: 16px;
+  font-weight: 700;
+  color: #5d4037;
+  display: block;
+  margin-top: 2px;
+}
+
+.heatmap-day.level-0 {
+  background: #f5e6d8;
+}
+.heatmap-day.level-1 {
+  background: #ffccbc;
+}
+.heatmap-day.level-2 {
+  background: #ff8a65;
+}
+.heatmap-day.level-3 {
+  background: #ff5722;
+  color: #fff;
+}
+.heatmap-day.level-3 .day-count {
+  color: #fff;
+}
+.heatmap-day.level-3 .day-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ─── 洞察 ─── */
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insight-item {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border-left: 3px solid #ff8a65;
+}
+
+/* ─── 底部 ─── */
+.panel-footer {
+  text-align: center;
+  font-size: 12px;
+  color: #bcaaa4;
+  margin-top: 8px;
+  padding: 8px 0;
+}
+
+/* ─── 动画 ─── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel-section {
+  animation: fadeIn 0.4s ease both;
+}
+
+.panel-section:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.panel-section:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.panel-section:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.panel-section:nth-child(5) {
+  animation-delay: 0.2s;
+}

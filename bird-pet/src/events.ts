@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-type EventMap = {};
+type EventMap = Record<string, unknown>;
 type Listener<T> = (data: T) => void;
 
 /**
@@ -29,12 +28,9 @@ export class EventBus<Events extends EventMap> {
   }
 
   /** 触发事件（void 事件无需传参） */
-  emit<K extends keyof Events>(
-    event: K,
-    ...args: Events[K] extends void ? [] : [Events[K]]
-  ): void {
+  emit<K extends keyof Events>(event: K, ...args: Events[K] extends void ? [] : [Events[K]]): void {
     const data = args[0] as Events[K];
-    this.listeners.get(event)?.forEach(fn => (fn as Listener<Events[K]>)(data));
+    this.listeners.get(event)?.forEach((fn) => (fn as Listener<Events[K]>)(data));
   }
 
   /** 取消订阅 */

@@ -11,6 +11,8 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emitTo, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
+import type { BubbleDismissedPayload, BubbleShowPayload } from '../types';
+import { BUBBLE_CHAR_INTERVAL } from '../constants';
 import { MessageQueue, type BubbleMessage, type QueuedMessage } from './message-queue';
 
 /** 气泡窗口尺寸（逻辑像素） */
@@ -18,8 +20,6 @@ const BUBBLE_WIDTH = 220;
 const BUBBLE_HEIGHT = 110;
 /** 气泡底部与宠物窗口顶部的重叠像素 */
 const BUBBLE_OVERLAP = 4;
-/** 打字机每字耗时（与 bubble-entry.ts 保持一致） */
-const CHAR_INTERVAL = 40;
 
 export class BubbleManager {
   private mainWin = getCurrentWindow();
@@ -29,17 +29,31 @@ export class BubbleManager {
   private moveUnlisten: (() => void) | null = null;
   private dismissUnlisten: (() => void) | null = null;
   private hideTimer: number | null = null;
+  private messageSeq = 0;
+  private currentMessageId = '';
 
   constructor() {
     this.queue = new MessageQueue();
-    this.queue.onPlay(msg => this.displayMessage(msg));
+    this.queue.onPlay((msg) => this.displayMessage(msg));
   }
 
   /**
    * 初始化气泡窗口（应用启动时调用一次）
    * 创建隐藏的 WebviewWindow，等待其内部脚本就绪。
    */
+  /** 气泡就绪等待超时（毫秒） */
+  static readonly READY_TIMEOUT = 10_000;
+
   async init(): Promise<void> {
+    // 先注册 bubble:ready 监听，再创建窗口，消除竞态
+    let readyResolve: (() => void) | null = null;
+    const readyPromise = new Promise<void>((resolve) => {
+      readyResolve = resolve;
+    });
+    const readyUnsubPromise = listen('bubble:ready', () => {
+      readyResolve?.();
+    });
+
     this.bubbleWin = new WebviewWindow('bubble', {
       url: '/bubble.html',
       width: BUBBLE_WIDTH,
@@ -60,13 +74,22 @@ export class BubbleManager {
       this.bubbleWin!.once('tauri://error', (e) => reject(e));
     });
 
-    // 等待气泡窗口内部脚本就绪
-    await new Promise<void>((resolve) => {
-      const unlisten = listen('bubble:ready', () => {
-        unlisten.then(fn => fn());
-        resolve();
-      });
-    });
+    try {
+      // 等待气泡窗口内部脚本就绪（带超时保护）
+      await Promise.race([
+        readyPromise,
+        new Promise<void>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('bubble:ready timeout — 气泡窗口未在规定时间内就绪')),
+            BubbleManager.READY_TIMEOUT,
+          ),
+        ),
+      ]);
+    } finally {
+      // 无论成功/超时/异常，都释放 ready 监听器
+      const readyUnsub = await readyUnsubPromise;
+      readyUnsub();
+    }
 
     // 监听主窗口移动，同步气泡位置
     this.moveUnlisten = await this.mainWin.onMoved(() => {
@@ -74,8 +97,8 @@ export class BubbleManager {
     });
 
     // 监听气泡自行消失（动画结束后）
-    const fn = await listen('bubble:dismissed', () => {
-      this.onBubbleDismissed();
+    const fn = await listen<BubbleDismissedPayload>('bubble:dismissed', (event) => {
+      this.onBubbleDismissed(event.payload.messageId);
     });
     this.dismissUnlisten = fn;
   }
@@ -94,9 +117,14 @@ export class BubbleManager {
   async dispose(): Promise<void> {
     this.queue.clear();
     this.clearHideTimer();
+    this.currentMessageId = '';
     this.moveUnlisten?.();
     this.dismissUnlisten?.();
-    try { await this.bubbleWin?.close(); } catch { /* 忽略 */ }
+    try {
+      await this.bubbleWin?.close();
+    } catch {
+      /* 忽略 */
+    }
   }
 
   // ─── 内部方法 ───
@@ -105,27 +133,36 @@ export class BubbleManager {
     if (!this.bubbleWin) return;
 
     this.clearHideTimer();
+    const messageId = `bubble-${++this.messageSeq}`;
+    this.currentMessageId = messageId;
+
     await this.repositionBubble();
     await this.bubbleWin.show();
-    await emitTo('bubble', 'bubble:show', {
+    const payload: BubbleShowPayload = {
       text: msg.text,
       duration: msg.duration,
-    });
+      messageId,
+    };
+    await emitTo('bubble', 'bubble:show', payload);
 
     // 计算总展示时间 = 打字时间 + 持续时间 + 动画余量
-    const typewriterMs = msg.text.length * CHAR_INTERVAL + 100;
+    const typewriterMs = msg.text.length * BUBBLE_CHAR_INTERVAL + 100;
     const totalMs = typewriterMs + msg.duration + 450;
 
     // 兜底定时器：如果 bubble:dismissed 未及时到达，自动推进队列
-    this.hideTimer = window.setTimeout(() => {
-      this.onBubbleDismissed();
+    this.hideTimer = setTimeout(() => {
+      this.onBubbleDismissed(messageId);
     }, totalMs);
   }
 
-  private onBubbleDismissed(): void {
+  private onBubbleDismissed(messageId: string): void {
+    if (!messageId || messageId !== this.currentMessageId) {
+      return;
+    }
     this.clearHideTimer();
     // 隐藏窗口
     this.bubbleWin?.hide().catch(() => {});
+    this.currentMessageId = '';
     // 推进消息队列
     this.queue.done();
   }

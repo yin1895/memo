@@ -20,26 +20,28 @@ export class AnimationEngine {
   private current = 'idle';
   private frame = 0;
   private lastTick = 0;
+  private running = false;
+  private rafId = 0;
   private _actionLock = false;
+  private readonly tickFrame: FrameRequestCallback;
 
   constructor(canvas: HTMLCanvasElement, bus: EventBus<AppEvents>) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true })!;
     this.bus = bus;
+    this.tickFrame = (ts) => this.tick(ts);
   }
 
   // ─── 公开 API ───
 
   /** 加载动画清单与所有精灵图 */
   async load(): Promise<void> {
-    this.manifest = await fetch('/manifest.json').then(r => r.json());
+    this.manifest = await fetch('/manifest.json').then((r) => r.json());
 
     const [fw, fh] = this.manifest.frame_size;
     this.setCanvasSize(fw, fh);
 
-    const uniqueSheets = new Set(
-      Object.values(this.manifest.animations).map(a => a.sheet),
-    );
+    const uniqueSheets = new Set(Object.values(this.manifest.animations).map((a) => a.sheet));
     for (const sheet of uniqueSheets) {
       this.sheets.set(sheet, await loadImage('/' + sheet));
     }
@@ -82,9 +84,23 @@ export class AnimationEngine {
 
   /** 初始化并启动动画循环 */
   start(): void {
+    if (this.running) return;
+    this.running = true;
+    this.lastTick = 0;
     this.play('idle');
     this.drawFrame();
-    requestAnimationFrame(ts => this.tick(ts));
+    this.rafId = requestAnimationFrame(this.tickFrame);
+  }
+
+  /** 停止动画循环并重置循环状态 */
+  stop(): void {
+    if (!this.running) return;
+    this.running = false;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
+    this.rafId = 0;
+    this.lastTick = 0;
   }
 
   // ─── 内部方法 ───
@@ -112,6 +128,7 @@ export class AnimationEngine {
   }
 
   private tick(ts: number): void {
+    if (!this.running) return;
     const frameDuration = 1000 / this.manifest.fps;
 
     if (!this.lastTick) this.lastTick = ts;
@@ -138,6 +155,6 @@ export class AnimationEngine {
       this.drawFrame();
     }
 
-    requestAnimationFrame(t => this.tick(t));
+    this.rafId = requestAnimationFrame(this.tickFrame);
   }
 }

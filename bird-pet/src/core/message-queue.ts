@@ -94,9 +94,7 @@ export class MessageQueue {
     if (this._playing || this.queue.length === 0) return;
 
     // 按优先级排序
-    this.queue.sort((a, b) =>
-      PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority],
-    );
+    this.queue.sort((a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]);
 
     const msg = this.queue.shift()!;
     this._playing = true;
@@ -113,9 +111,7 @@ export class MessageQueue {
   private async forceNext(): Promise<void> {
     this._playing = true;
     // 按优先级排序后取第一个
-    this.queue.sort((a, b) =>
-      PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority],
-    );
+    this.queue.sort((a, b) => PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority]);
     const msg = this.queue.shift();
     if (!msg) {
       this._playing = false;

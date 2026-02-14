@@ -51,11 +51,7 @@ export class GreetingManager {
   /** 已触发的时段（内存级，重启后重置） */
   private triggeredPeriods: Set<TimePeriod> = new Set();
 
-  constructor(
-    bubble: BubbleManager,
-    dialogue: DialogueEngine,
-    effects: EffectsManager,
-  ) {
+  constructor(bubble: BubbleManager, dialogue: DialogueEngine, effects: EffectsManager) {
     this.bubble = bubble;
     this.dialogue = dialogue;
     this.effects = effects;

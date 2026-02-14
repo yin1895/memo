@@ -38,10 +38,7 @@ export class ClickThroughManager {
     this.lastToggleAt = now;
 
     try {
-      this._enabled = !this._enabled;
-      await this.win.setIgnoreCursorEvents(this._enabled);
-      this.updateVisual();
-      this.bus.emit('clickthrough:changed', { enabled: this._enabled });
+      await this.setEnabled(!this._enabled);
 
       const hint = this._enabled
         ? `穿透：开（${MODIFIER_KEY}+Shift+P 关闭）`
@@ -49,7 +46,6 @@ export class ClickThroughManager {
       showHint(hint);
     } catch (error) {
       console.error('切换穿透模式失败:', error);
-      this._enabled = !this._enabled; // 回滚
       showHint('切换穿透模式失败', 2000);
     } finally {
       this.isToggling = false;
@@ -58,9 +54,11 @@ export class ClickThroughManager {
 
   /** 强制设置穿透状态（菜单系统内部使用） */
   async setEnabled(value: boolean): Promise<void> {
-    this._enabled = value;
+    if (this._enabled === value) return;
     await this.win.setIgnoreCursorEvents(value);
+    this._enabled = value;
     this.updateVisual();
+    this.bus.emit('clickthrough:changed', { enabled: this._enabled });
   }
 
   private updateVisual(): void {

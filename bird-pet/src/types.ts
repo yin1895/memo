@@ -14,6 +14,18 @@ export interface Manifest {
   animations: Record<string, AnimDef>;
 }
 
+/** 主窗口 -> 气泡窗口显示消息载荷 */
+export interface BubbleShowPayload {
+  text: string;
+  duration: number;
+  messageId: string;
+}
+
+/** 气泡窗口 -> 主窗口消失回执载荷 */
+export interface BubbleDismissedPayload {
+  messageId: string;
+}
+
 // ────────────────────────────────────────
 // 记忆系统数据类型（v0.4.0）
 // ────────────────────────────────────────
@@ -21,11 +33,7 @@ export interface Manifest {
 import type { AppContext } from './features/dialogue-engine';
 
 /** 记忆事件类型 */
-export type MemoryEventType =
-  | 'interaction'
-  | 'context_switch'
-  | 'pomodoro_complete'
-  | 'app_active';
+export type MemoryEventType = 'interaction' | 'context_switch' | 'pomodoro_complete' | 'app_active';
 
 /** 单条记忆事件 */
 export interface MemoryEvent {
@@ -99,7 +107,9 @@ export type AppEvents = {
   'pomodoro:break': void;
   'pomodoro:stop': void;
   /** 行为上下文变更（v0.3.0） */
-  'context:changed': { from: string; to: string };
+  'context:changed': { from: AppContext; to: AppContext };
   /** 记忆系统洞察事件（v0.4.0） */
   'memory:insight': { type: string; message: string };
+  /** 记忆系统里程碑事件（v1.0.0） */
+  'memory:milestone': { kind: string; value: number; message: string };
 };

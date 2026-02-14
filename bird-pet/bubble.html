@@ -7,8 +7,8 @@
   </head>
   <body>
     <div id="bubble-app">
-      <div id="bubble" class="bubble-hidden">
-        <div id="bubble-text"></div>
+      <div id="bubble" class="bubble-hidden" role="status" aria-live="polite" aria-atomic="true">
+        <div id="bubble-text" aria-label="气泡消息文本"></div>
       </div>
     </div>
     <script type="module" src="/src/bubble-entry.ts"></script>

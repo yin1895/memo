@@ -16,6 +16,7 @@ import type { AppEvents } from '../types';
 import type { BubbleManager } from '../core/bubble-manager';
 import type { DialogueEngine, AppContext } from './dialogue-engine';
 import type { StorageService } from '../core/storage';
+import type { QuietModeManager } from './quiet-mode';
 
 /** 活跃窗口信息（来自 Rust 后端） */
 interface ActiveWindowInfo {
@@ -33,10 +34,13 @@ const LINE_COOLDOWN = 5 * 60 * 1000;
  * key: AppContext, value: 匹配的应用名关键词（不区分大小写）
  */
 const APP_RULES: Record<Exclude<AppContext, 'unknown'>, RegExp> = {
-  coding: /code|visual studio|intellij|idea|webstorm|pycharm|sublime|vim|neovim|nvim|android studio|rider|clion|goland|cursor|windsurf/i,
+  coding:
+    /code|visual studio|intellij|idea|webstorm|pycharm|sublime|vim|neovim|nvim|android studio|rider|clion|goland|cursor|windsurf/i,
   browsing: /chrome|firefox|edge|safari|brave|opera|vivaldi|arc|msedge/i,
-  gaming: /steam|epic|riot|league|genshin|原神|valorant|minecraft|roblox|unity|unreal|bluestacks|遊戲|游戏/i,
-  music: /spotify|网易云|cloudmusic|qqmusic|qq音乐|foobar|musicbee|aimp|apple music|itunes|酷狗|酷我/i,
+  gaming:
+    /steam|epic|riot|league|genshin|原神|valorant|minecraft|roblox|unity|unreal|bluestacks|遊戲|游戏/i,
+  music:
+    /spotify|网易云|cloudmusic|qqmusic|qq音乐|foobar|musicbee|aimp|apple music|itunes|酷狗|酷我/i,
   meeting: /zoom|teams|腾讯会议|wemeet|飞书|feishu|钉钉|dingtalk|slack|discord|webex|skype/i,
   idle: /explorer|桌面|desktop/i,
 };
@@ -46,6 +50,7 @@ export class ContextAwareness {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
   private storage: StorageService | null;
+  private quietMode: QuietModeManager | null;
 
   private timer: number | null = null;
   private _currentContext: AppContext = 'unknown';
@@ -61,11 +66,13 @@ export class ContextAwareness {
     bubble: BubbleManager,
     dialogue: DialogueEngine,
     storage?: StorageService,
+    quietMode?: QuietModeManager,
   ) {
     this.bus = bus;
     this.bubble = bubble;
     this.dialogue = dialogue;
     this.storage = storage ?? null;
+    this.quietMode = quietMode ?? null;
   }
 
   /** 启动行为感知 */
@@ -88,8 +95,8 @@ export class ContextAwareness {
     }
   }
 
-  /** 销毁（停止 + 清理引用） */
-  destroy(): void {
+  /** 释放资源（停止轮询） */
+  dispose(): void {
     this.stop();
   }
 
@@ -103,16 +110,20 @@ export class ContextAwareness {
       const newContext = this.classify(info);
 
       // 上下文发生变化
-      if (newContext !== this._currentContext && newContext !== 'unknown') {
+      if (newContext !== this._currentContext) {
         const oldContext = this._currentContext;
         this._currentContext = newContext;
 
         // 广播上下文变更事件
         this.bus.emit('context:changed', { from: oldContext, to: newContext });
 
+        // unknown 仅用于状态复位，不触发上下文气泡
+        if (newContext === 'unknown') return;
+
         // 冷却检查：距上次台词 ≥ 5 分钟才说话
+        // v1.0.0: 静默模式下跳过气泡（但上下文事件仍广播，供 QuietMode 追踪）
         const now = Date.now();
-        if (now - this.lastLineTime >= LINE_COOLDOWN) {
+        if (now - this.lastLineTime >= LINE_COOLDOWN && !this.quietMode?.isFullSilent()) {
           const line = this.dialogue.getContextLine(newContext);
           if (line) {
             this.bubble.say({ text: line, priority: 'low', duration: 4000 });
@@ -127,15 +138,17 @@ export class ContextAwareness {
 
   /** 根据窗口信息分类用户行为 */
   private classify(info: ActiveWindowInfo): AppContext {
-    const target = `${info.app_name} ${info.title}`;
+    const appName = info.app_name ?? '';
+    const title = info.title ?? '';
+    const matches = (rule: RegExp) => rule.test(appName) || rule.test(title);
 
     // 按优先级匹配（meeting > gaming > music > coding > browsing > idle）
-    if (APP_RULES.meeting.test(target)) return 'meeting';
-    if (APP_RULES.gaming.test(target)) return 'gaming';
-    if (APP_RULES.music.test(target)) return 'music';
-    if (APP_RULES.coding.test(target)) return 'coding';
-    if (APP_RULES.browsing.test(target)) return 'browsing';
-    if (APP_RULES.idle.test(target)) return 'idle';
+    if (matches(APP_RULES.meeting)) return 'meeting';
+    if (matches(APP_RULES.gaming)) return 'gaming';
+    if (matches(APP_RULES.music)) return 'music';
+    if (matches(APP_RULES.coding)) return 'coding';
+    if (matches(APP_RULES.browsing)) return 'browsing';
+    if (matches(APP_RULES.idle)) return 'idle';
 
     return 'unknown';
   }

@@ -7,18 +7,26 @@
 import type { BubbleManager } from '../core/bubble-manager';
 import type { DialogueEngine } from './dialogue-engine';
 import type { StorageService } from '../core/storage';
+import type { QuietModeManager } from './quiet-mode';
 
 export class HourlyChime {
   private bubble: BubbleManager;
   private dialogue: DialogueEngine;
   private storage: StorageService | null;
+  private quietMode: QuietModeManager | null;
   private timer: number | null = null;
   private enabled = true;
 
-  constructor(bubble: BubbleManager, dialogue: DialogueEngine, storage?: StorageService) {
+  constructor(
+    bubble: BubbleManager,
+    dialogue: DialogueEngine,
+    storage?: StorageService,
+    quietMode?: QuietModeManager,
+  ) {
     this.bubble = bubble;
     this.dialogue = dialogue;
     this.storage = storage ?? null;
+    this.quietMode = quietMode ?? null;
   }
 
   /** 启动整点报时 */
@@ -59,6 +67,9 @@ export class HourlyChime {
   }
 
   private chime(): void {
+    // v1.0.0: 静默模式下跳过整点报时
+    if (this.quietMode?.isFullSilent()) return;
+
     const hour = new Date().getHours();
     const text = this.dialogue.getLine('hourly', { hour });
     this.bubble.say({

@@ -7,6 +7,7 @@ import type { EventBus } from '../events';
 import type { AnimationEngine } from './animation';
 import type { ClickThroughManager } from './click-through';
 import type { MenuController } from './menu';
+import type { QuietModeManager } from '../features/quiet-mode';
 
 /** setupInteraction 所需依赖 */
 export interface InteractionDeps {
@@ -16,6 +17,9 @@ export interface InteractionDeps {
   clickThrough: ClickThroughManager;
   menu: MenuController;
   bus: EventBus<AppEvents>;
+  quietMode?: QuietModeManager;
+  /** 统一退出回调（包含 gracefulShutdown + exit） */
+  onQuit?: () => Promise<void>;
 }
 
 /**
@@ -27,7 +31,7 @@ export interface InteractionDeps {
  * @returns 清理函数（用于 beforeunload 等场景）
  */
 export function setupInteraction(deps: InteractionDeps): () => void {
-  const { canvas, app, animation, clickThrough, menu, bus } = deps;
+  const { canvas, app, animation, clickThrough, menu, bus, quietMode, onQuit } = deps;
   const win = getCurrentWindow();
 
   let timer: number | null = null;
@@ -94,13 +98,16 @@ export function setupInteraction(deps: InteractionDeps): () => void {
     if (clickThrough.enabled) return;
     if (animation.getCurrentAnimation() !== 'idle') return;
     if (animation.isLocked()) return;
+    // 低打扰模式：勿扰/会议时完全静默，深夜时完全停止自动动画
+    if (quietMode?.isFullSilent()) return;
+    if (quietMode?.isNightMode()) return;
     if (Math.random() < CONFIG.AUTO_ACTION_PROBABILITY) {
       animation.playRandomAction();
     }
   }, CONFIG.AUTO_ACTION_INTERVAL);
 
   // ─── 全局快捷键 ───
-  const shortcutsReady = setupShortcuts(clickThrough);
+  const shortcutsReady = setupShortcuts(clickThrough, onQuit);
 
   // ─── 清理 ───
   return () => {
@@ -115,10 +122,17 @@ export function setupInteraction(deps: InteractionDeps): () => void {
   };
 }
 
-async function setupShortcuts(clickThrough: ClickThroughManager): Promise<void> {
+async function setupShortcuts(
+  clickThrough: ClickThroughManager,
+  onQuit?: () => Promise<void>,
+): Promise<void> {
   await register('CommandOrControl+Shift+P', () => clickThrough.toggle());
   await register('CommandOrControl+Shift+Q', async () => {
-    await unregisterAll();
-    await exit(0);
+    if (onQuit) {
+      await onQuit();
+    } else {
+      await unregisterAll();
+      await exit(0);
+    }
   });
 }
