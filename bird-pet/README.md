@@ -17,7 +17,7 @@
 - **价值给予功能**：点击台词、久坐提醒、整点报时、番茄钟、系统监控
 - **视觉反馈**：穿透模式下半透明+发光效果
 - **行为感知**：检测当前活跃窗口，识别编码/浏览/游戏/音乐/会议等场景并做出对应反应
-- **对话引擎**：场景化条件匹配的台词系统（193+ 条台词），支持模板变量（{nickname}等）
+- **对话引擎**：场景化条件匹配的台词系统，支持模板变量（{nickname} 等）
 - **粒子特效**：CSS 动画粒子层（心形飘升、星星闪烁、音符飘动、Zzz 等）
 - **持久化存储**：基于 tauri-plugin-store 的本地状态持久化
 - **特殊日期彩蛋**：生日、情人节、圣诞节、520、认识纪念日等自动触发专属台词 + 粒子特效
@@ -30,7 +30,9 @@
 - **🆕 低打扰智能模式**：勿扰时段 / 深夜降频 / 会议自动静默 / 专注保护
 - **🆕 窗口记忆**：关闭前自动保存窗口位置，下次启动恢复
 - **🆕 开机自启**：支持 Windows 开机时自动启动
-- **🆕 定时自动保存**：每 5 分钟自动持久化记忆与状态数据
+- **🆕 定时自动保存**：每 2 分钟自动持久化记忆与状态数据
+- **🆕 稳定退出链路**：Rust 拦截 `CloseRequested`，统一走前端 `gracefulShutdown` ACK 流程
+- **🆕 消息竞态防护**：气泡消息使用 `messageId` 协议，过期 dismiss 会被丢弃
 
 ## 🏗️ 技术栈
 
@@ -60,6 +62,7 @@ bird-pet/
 ├── src/                          # 前端源码
 │   ├── main.ts                   # 应用入口（编排层）
 │   ├── config.ts                 # 配置常量
+│   ├── constants.ts              # 共享业务常量
 │   ├── types.ts                  # 类型与事件声明
 │   ├── events.ts                 # 类型安全 EventBus
 │   ├── utils.ts                  # 通用工具
@@ -80,9 +83,10 @@ bird-pet/
 │   │   ├── message-queue.ts      # 消息队列
 │   │   ├── storage.ts            # 持久化存储服务
 │   │   ├── memory.ts             # 记忆系统（v0.4.0）
+│   │   ├── dirty-shutdown.ts     # 脏退出标记管理
 │   │   └── effects.ts            # CSS 粒子特效管理
 │   ├── features/                 # 价值功能模块
-│   │   ├── messages.ts           # 台词库（193+ 条个性化台词）
+│   │   ├── messages.ts           # 台词库（场景化台词）
 │   │   ├── dialogue-engine.ts    # 对话引擎（模板变量 + 条件匹配）
 │   │   ├── context-awareness.ts  # 行为感知
 │   │   ├── idle-care.ts          # 久坐关怀
@@ -95,15 +99,14 @@ bird-pet/
 │   │   ├── memory-panel.ts       # 回忆面板管理（v1.0.0）
 │   │   └── quiet-mode.ts         # 低打扰智能模式（v1.0.0）
 │   └── assets/                   # 静态资源
-├── tests/                        # 单元测试（v1.0.0）
-│   ├── events.test.ts            # EventBus 测试
-│   ├── message-queue.test.ts     # MessageQueue 测试
-│   ├── dialogue-engine.test.ts   # DialogueEngine 测试
-│   └── quiet-mode.test.ts        # QuietModeManager 测试
+├── tests/                        # 单元测试（当前 15 个测试文件 / 105 个用例）
+│   └── *.test.ts                 # 覆盖 core/features/shutdown 等关键模块
 ├── src-tauri/                    # Rust 后端
 │   ├── src/
-│   │   ├── main.rs              # 应用入口 + 系统托盘 + 系统监控
-│   │   └── lib.rs               # 库文件
+│   │   ├── app_builder.rs       # 共享 builder 配置（main/lib 复用）
+│   │   ├── shutdown_state.rs    # 退出防重入状态
+│   │   ├── main.rs              # 桌面入口（托盘 + 窗口事件）
+│   │   └── lib.rs               # 库入口（复用 builder）
 │   ├── capabilities/            # Tauri 权限配置
 │   │   └── default.json         # 默认权限集
 │   ├── tauri.conf.json          # Tauri 配置
@@ -262,12 +265,23 @@ const CONFIG = {
     "core:window:allow-outer-position",
     "core:window:allow-outer-size",
     "core:window:allow-scale-factor",
+    "core:window:allow-set-focus",
     "core:webview:allow-create-webview-window",
+    "core:event:allow-emit-to",
+    "core:event:allow-listen",
+    "core:tray:default",
     "process:allow-exit",
     "process:allow-restart",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-unregister-all",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "opener:default",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled",
     "store:default"
   ]
 }
@@ -362,6 +376,10 @@ bubble.say({ text: '嘿嘿！今天也要加油鸭！💪', priority: 'normal' }
 - ✅ 退出功能失效 → 添加 process 插件和权限
 - ✅ 菜单项可重复点击 → 添加 disabled 状态
 - ✅ 缺少错误处理 → 所有异步操作添加 try-catch
+- ✅ 气泡 dismiss 竞态导致队列错乱 → `messageId` 协议 + 过期事件丢弃
+- ✅ `beforeunload` 异步落盘不可靠 → Rust 端接管关窗并统一 ACK 退出
+- ✅ `getContextLine` 未替换模板变量 → 统一接入 `applyTemplate`
+- ✅ 回忆面板双开冲突 → 创建并发互斥 + ready 协议 + async close
 
 ### 性能优化
 - 限制最大 DPR 为 2x，避免高分屏过度绘制
@@ -370,10 +388,21 @@ bubble.say({ text: '嘿嘿！今天也要加油鸭！💪', priority: 'normal' }
 - 系统监控采用低频轮询 + 冷却时间，减少性能开销
 
 ## 📝 开发日志
+### 2026-02-14 (post-review hardening)
+- 🛡️ **退出链路收敛**：`CloseRequested` 统一接入 Rust -> 前端 `app:request-quit` -> `app:shutdown-complete` ACK 流程
+- 💬 **消息竞态修复**：气泡系统引入 `messageId` 协议，过期 dismiss 不再推进队列
+- 🧩 **模板一致性修复**：`getContextLine()` 支持模板替换，`{nickname}` 等占位符不再裸露
+- 🧠 **记忆系统稳健性**：启动洞察 5s 定时器可在 `stop()` 清理，避免退出后悬挂回调
+- 🪟 **面板生命周期修复**：`showPanel()` 增加并发保护；`dispose()` 改为 async 并 `await close()`
+- 🖱️ **点击穿透一致性**：`setEnabled()` 先调用系统 API 再写本地状态，并统一发射状态事件
+- 🌙 **QuietMode 偏好刷新**：支持运行时懒刷新，避免长驻进程读取过期偏好
+- 🔧 **启动流可控化**：日启动流程由嵌套 `setTimeout` 改为串行 `await` 编排
+- ✅ **验证通过**：`vitest` 15 文件 / 105 用例通过，`tsc -p tsconfig.test.json --noEmit` 与 `cargo check` 通过
+
 ### 2026-XX-XX (v1.0.0) 🎉 重大更新
 - 💕 **个性化称呼**：对话引擎支持 `{nickname}` 模板变量，从称呼池（芊芊/雨芊/小芊/芊宝）随机选取
 - 💌 **认识纪念日**：1 月 20 日触发专属台词 + 心形粒子特效，包含 `{daysSinceMet}` 天数
-- 📜 **台词全面个性化**：193+ 条台词中约 50 条注入 `{nickname}`，覆盖点击/闲置/正能量/反思/问候/特殊日期
+- 📜 **台词全面个性化**：大量台词注入 `{nickname}`，覆盖点击/闲置/正能量/反思/问候/特殊日期
 - 📖 **回忆卡片**：每日首次启动弹出回忆卡片窗口（连续天数、亲密度、认识天数），8 秒自动关闭
 - 🏆 **里程碑系统**：连续天数（7/14/30/50/100/200/365）、互动次数（100/500/1000/2000/5000）、认识天数达到阈值时触发庆祝特效
 - 📊 **回忆面板**：托盘菜单"查看回忆"打开面板窗口 → 亲密度进度条 + 4 项核心统计 + 7 天活动热力图 + 洞察列表
@@ -382,8 +411,8 @@ bubble.say({ text: '嘿嘿！今天也要加油鸭！💪', priority: 'normal' }
 - 🌙 **深夜关怀**：午夜后用户仍在线时发送一次温柔提醒
 - 💾 **窗口位置记忆**：关闭前保存窗口坐标，重启后恢复
 - 🚀 **开机自启**：支持 Windows 开机自动启动（tauri-plugin-autostart）
-- ⏱️ **自动保存**：每 5 分钟自动持久化记忆与状态数据
-- 🧪 **单元测试**：新增 vitest 测试套件（EventBus/MessageQueue/DialogueEngine/QuietMode，36 个用例）
+- ⏱️ **自动保存**：每 2 分钟自动持久化记忆与状态数据
+- 🧪 **单元测试**：当前 vitest 测试已扩展到 15 个测试文件 / 105 个用例
 - 🐛 **修复**：IdleCare 事件监听未取消订阅的内存泄漏
 - 🔒 **安全**：添加 CSP 安全策略（`default-src 'self'`）
 - 🏷️ **标识符**：应用标识符更改为 `com.birdpet.yuqian`
