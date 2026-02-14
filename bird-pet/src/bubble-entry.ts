@@ -6,13 +6,9 @@
  */
 import './bubble.css';
 import { listen, emit } from '@tauri-apps/api/event';
+import type { BubbleDismissedPayload, BubbleShowPayload } from './types';
 
 /** 来自主窗口的显示消息载荷 */
-interface BubbleShowPayload {
-  text: string;
-  duration: number;
-}
-
 const bubble = document.getElementById('bubble')!;
 const textEl = document.getElementById('bubble-text')!;
 
@@ -21,6 +17,8 @@ const CHAR_INTERVAL = 40;
 
 let typewriterTimer: number | null = null;
 let hideTimer: number | null = null;
+let fadeoutTimer: number | null = null;
+let currentMessageId = '';
 
 function clearTimers(): void {
   if (typewriterTimer !== null) {
@@ -31,10 +29,15 @@ function clearTimers(): void {
     clearTimeout(hideTimer);
     hideTimer = null;
   }
+  if (fadeoutTimer !== null) {
+    clearTimeout(fadeoutTimer);
+    fadeoutTimer = null;
+  }
 }
 
-function showBubble(text: string, duration: number): void {
+function showBubble(text: string, duration: number, messageId: string): void {
   clearTimers();
+  currentMessageId = messageId;
 
   // 重置状态
   textEl.textContent = '';
@@ -57,21 +60,24 @@ function showBubble(text: string, duration: number): void {
 }
 
 function hideBubble(): void {
+  const dismissMessageId = currentMessageId;
   clearTimers();
   bubble.classList.remove('bubble-fadein');
   bubble.classList.add('bubble-fadeout');
   // 等淡出动画完成后隐藏
-  setTimeout(() => {
+  fadeoutTimer = window.setTimeout(() => {
+    fadeoutTimer = null;
     bubble.classList.add('bubble-hidden');
     // 通知主窗口气泡已消失
-    emit('bubble:dismissed');
+    const payload: BubbleDismissedPayload = { messageId: dismissMessageId };
+    emit('bubble:dismissed', payload);
   }, 350);
 }
 
 // ─── 事件监听 ───
 
 listen<BubbleShowPayload>('bubble:show', (event) => {
-  showBubble(event.payload.text, event.payload.duration);
+  showBubble(event.payload.text, event.payload.duration, event.payload.messageId);
 });
 
 listen('bubble:hide', () => {

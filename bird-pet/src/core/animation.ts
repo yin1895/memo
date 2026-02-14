@@ -20,6 +20,8 @@ export class AnimationEngine {
   private current = 'idle';
   private frame = 0;
   private lastTick = 0;
+  private running = false;
+  private rafId = 0;
   private _actionLock = false;
 
   constructor(canvas: HTMLCanvasElement, bus: EventBus<AppEvents>) {
@@ -82,9 +84,23 @@ export class AnimationEngine {
 
   /** 初始化并启动动画循环 */
   start(): void {
+    if (this.running) return;
+    this.running = true;
+    this.lastTick = 0;
     this.play('idle');
     this.drawFrame();
-    requestAnimationFrame(ts => this.tick(ts));
+    this.rafId = requestAnimationFrame(ts => this.tick(ts));
+  }
+
+  /** 停止动画循环并重置循环状态 */
+  stop(): void {
+    if (!this.running) return;
+    this.running = false;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
+    this.rafId = 0;
+    this.lastTick = 0;
   }
 
   // ─── 内部方法 ───
@@ -112,6 +128,7 @@ export class AnimationEngine {
   }
 
   private tick(ts: number): void {
+    if (!this.running) return;
     const frameDuration = 1000 / this.manifest.fps;
 
     if (!this.lastTick) this.lastTick = ts;
@@ -138,6 +155,6 @@ export class AnimationEngine {
       this.drawFrame();
     }
 
-    requestAnimationFrame(t => this.tick(t));
+    this.rafId = requestAnimationFrame(t => this.tick(t));
   }
 }

@@ -33,6 +33,16 @@ function createManager(opts: {
   daysSinceMet?: number;
   triggeredMilestones?: string[];
 }) {
+  const metDateFromDaysAgo = (days: number): string => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const bus = {
     emit: vi.fn(),
     on: vi.fn(),
@@ -65,7 +75,7 @@ function createManager(opts: {
     memory,
     storage,
     owner,
-    opts.daysSinceMet ?? 0,
+    metDateFromDaysAgo(opts.daysSinceMet ?? 0),
   );
 
   return { manager, snapshot, profile, storage };

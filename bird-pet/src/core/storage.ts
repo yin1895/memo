@@ -30,6 +30,10 @@ export const STORE_KEYS = {
   WINDOW_POSITION: 'windowPosition',
   /** 已触发的里程碑集合（v1.1.0） */
   TRIGGERED_MILESTONES: 'triggeredMilestones',
+  /** 今日番茄完成数量（v1.2.0） */
+  POMODORO_COUNT: 'pomodoroCount',
+  /** 番茄计数所属日期 YYYY-MM-DD（v1.2.0） */
+  POMODORO_DATE: 'pomodoroDate',
 } as const;
 
 /** 宠物主人信息 */

@@ -12,6 +12,7 @@ import type { EventBus } from '../events';
 import type { AppEvents, MemorySnapshot, UserProfile } from '../types';
 import type { MemorySystem } from '../core/memory';
 import type { PetOwnerProfile, StorageService } from '../core/storage';
+import { calcDaysSinceMet } from '../utils';
 
 /** 亲密度等级名称 */
 const AFFINITY_NAMES: Record<number, string> = {
@@ -30,7 +31,7 @@ export class MemoryCardManager {
   private memory: MemorySystem;
   private storage: StorageService;
   private petOwner: PetOwnerProfile;
-  private daysSinceMet: number;
+  private metDate: string;
   private cardWindow: WebviewWindow | null = null;
   private unlistenReady: (() => void) | null = null;
 
@@ -39,13 +40,13 @@ export class MemoryCardManager {
     memory: MemorySystem,
     storage: StorageService,
     petOwner: PetOwnerProfile,
-    daysSinceMet: number,
+    metDate: string,
   ) {
     this.bus = bus;
     this.memory = memory;
     this.storage = storage;
     this.petOwner = petOwner;
-    this.daysSinceMet = daysSinceMet;
+    this.metDate = metDate;
   }
 
   /**
@@ -56,6 +57,7 @@ export class MemoryCardManager {
       const snapshot = this.memory.getSnapshot();
       const profile = this.memory.getProfile();
       const milestone = await this.detectMilestone(snapshot, profile);
+      const daysSinceMet = calcDaysSinceMet(this.metDate);
 
       // 发射里程碑事件
       if (milestone) {
@@ -76,7 +78,7 @@ export class MemoryCardManager {
 
       const cardData = {
         streak: snapshot.streak,
-        daysSinceMet: this.daysSinceMet,
+        daysSinceMet,
         totalInteractions: profile.totalInteractions,
         affinityName: AFFINITY_NAMES[snapshot.affinityLevel] || '初识',
         affinityLevel: snapshot.affinityLevel,
@@ -156,6 +158,7 @@ export class MemoryCardManager {
     profile: Readonly<UserProfile>,
   ): Promise<{ kind: string; value: number; message: string } | null> {
     const triggered = await this.storage.getTriggeredMilestones();
+    const daysSinceMet = calcDaysSinceMet(this.metDate);
 
     // 连续天数里程碑（降序遍历，优先返回最高阶里程碑）
     for (const threshold of [...STREAK_MILESTONES].reverse()) {
@@ -187,7 +190,7 @@ export class MemoryCardManager {
     const metMilestones = [30, 50, 100, 200, 365];
     for (const threshold of [...metMilestones].reverse()) {
       const key = `met_days:${threshold}`;
-      if (this.daysSinceMet >= threshold && !triggered.includes(key)) {
+      if (daysSinceMet >= threshold && !triggered.includes(key)) {
         await this.storage.addTriggeredMilestone(key);
         return {
           kind: 'met_days',
@@ -221,6 +224,11 @@ export class MemoryCardManager {
       alwaysOnTop: true,
       skipTaskbar: true,
       center: true,
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      this.cardWindow!.once('tauri://created', () => resolve());
+      this.cardWindow!.once('tauri://error', (e) => reject(e));
     });
   }
 

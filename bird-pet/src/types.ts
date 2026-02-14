@@ -14,6 +14,18 @@ export interface Manifest {
   animations: Record<string, AnimDef>;
 }
 
+/** 主窗口 -> 气泡窗口显示消息载荷 */
+export interface BubbleShowPayload {
+  text: string;
+  duration: number;
+  messageId: string;
+}
+
+/** 气泡窗口 -> 主窗口消失回执载荷 */
+export interface BubbleDismissedPayload {
+  messageId: string;
+}
+
 // ────────────────────────────────────────
 // 记忆系统数据类型（v0.4.0）
 // ────────────────────────────────────────
