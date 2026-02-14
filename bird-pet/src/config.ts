@@ -17,7 +17,8 @@ export const CONFIG = {
 } as const;
 
 /** 平台检测 */
-const platformHint = (navigator as Navigator & { userAgentData?: { platform?: string } })
-  .userAgentData?.platform ?? navigator.userAgent;
+const platformHint =
+  (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
+  navigator.userAgent;
 export const IS_MAC = /mac/i.test(platformHint);
 export const MODIFIER_KEY = IS_MAC ? '⌘' : 'Ctrl';

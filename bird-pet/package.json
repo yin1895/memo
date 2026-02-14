@@ -9,7 +9,14 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint . --write",
+    "format": "biome format . --write",
+    "format:check": "biome format .",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -21,7 +28,9 @@
     "@tauri-apps/plugin-updater": "^2"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.15",
     "@tauri-apps/cli": "^2.10.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vitest": "^4.0.18"

@@ -148,7 +148,14 @@ export class SpecialDateManager {
       // 认识纪念日（格式 YYYY-MM-DD）
       if (owner.metDate) {
         const parts = owner.metDate.split('-').map(Number);
-        if (parts.length === 3 && parts[1] >= 1 && parts[1] <= 12 && parts[2] >= 1 && parts[2] <= 31 && isValidDate(parts[1], parts[2])) {
+        if (
+          parts.length === 3 &&
+          parts[1] >= 1 &&
+          parts[1] <= 12 &&
+          parts[2] >= 1 &&
+          parts[2] <= 31 &&
+          isValidDate(parts[1], parts[2])
+        ) {
           dates.push({
             name: '认识纪念日',
             month: parts[1],
@@ -180,10 +187,7 @@ export class SpecialDateManager {
     const todayKey = getLocalDateKey(now);
 
     // 检查是否已触发
-    const lastTriggered = await this.storage.get<string>(
-      STORE_KEYS.SPECIAL_DATE_TRIGGERED,
-      '',
-    );
+    const lastTriggered = await this.storage.get<string>(STORE_KEYS.SPECIAL_DATE_TRIGGERED, '');
     if (lastTriggered === todayKey) return;
 
     // 动态构建特殊日期列表（包含个性化日期）
@@ -258,9 +262,7 @@ export class SpecialDateManager {
         nextDate.setHours(0, 0, 0, 0);
       }
 
-      const diff = Math.ceil(
-        (nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      const diff = Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
       if (closest === null || diff < closest.days) {
         closest = { days: diff, name: sd.name };

@@ -26,11 +26,11 @@ describe('isValidDate', () => {
   });
 
   it('should reject invalid day-month combinations (non-existent dates)', () => {
-    expect(isValidDate(2, 30)).toBe(false);  // 2月没有30号
-    expect(isValidDate(2, 31)).toBe(false);  // 2月没有31号
-    expect(isValidDate(4, 31)).toBe(false);  // 4月没有31号
-    expect(isValidDate(6, 31)).toBe(false);  // 6月没有31号
-    expect(isValidDate(9, 31)).toBe(false);  // 9月没有31号
+    expect(isValidDate(2, 30)).toBe(false); // 2月没有30号
+    expect(isValidDate(2, 31)).toBe(false); // 2月没有31号
+    expect(isValidDate(4, 31)).toBe(false); // 4月没有31号
+    expect(isValidDate(6, 31)).toBe(false); // 6月没有31号
+    expect(isValidDate(9, 31)).toBe(false); // 9月没有31号
     expect(isValidDate(11, 31)).toBe(false); // 11月没有31号
   });
 
@@ -63,7 +63,7 @@ describe('isLeapYear', () => {
   it('should handle century years correctly', () => {
     expect(isLeapYear(1900)).toBe(false); // 能被 100 整除但不能被 400 整除
     expect(isLeapYear(2100)).toBe(false);
-    expect(isLeapYear(2400)).toBe(true);  // 能被 400 整除
+    expect(isLeapYear(2400)).toBe(true); // 能被 400 整除
   });
 });
 

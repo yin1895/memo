@@ -65,9 +65,8 @@ export class MemoryCardManager {
       const summaries = profile.dailySummaries;
       const yesterday = summaries.length > 0 ? summaries[summaries.length - 1] : null;
 
-      const nickname = this.petOwner.nicknames[
-        Math.floor(Math.random() * this.petOwner.nicknames.length)
-      ];
+      const nickname =
+        this.petOwner.nicknames[Math.floor(Math.random() * this.petOwner.nicknames.length)];
 
       const cardData = {
         streak: snapshot.streak,

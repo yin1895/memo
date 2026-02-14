@@ -15,12 +15,7 @@ import type { AppEvents } from '../types';
 import type { StorageService, UserPreferences } from '../core/storage';
 
 /** 静默原因 */
-export type SuppressReason =
-  | 'quiet_hours'
-  | 'night_mode'
-  | 'meeting'
-  | 'deep_focus'
-  | null;
+export type SuppressReason = 'quiet_hours' | 'night_mode' | 'meeting' | 'deep_focus' | null;
 
 export class QuietModeManager {
   private bus: EventBus<AppEvents>;

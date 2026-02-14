@@ -49,7 +49,7 @@ describe('StorageService', () => {
 
     it('旧版数据缺少 nightModeEnabled/autoStartEnabled 时自动补全', async () => {
       // 模拟 v0.3.0 时代的旧数据（只有 3 个字段）
-      mockStoreData['preferences'] = {
+      mockStoreData.preferences = {
         hourlyChimeEnabled: true,
         systemMonitorEnabled: false,
         contextAwarenessEnabled: true,
@@ -70,7 +70,7 @@ describe('StorageService', () => {
     });
 
     it('用户修改的值不被默认值覆盖', async () => {
-      mockStoreData['preferences'] = {
+      mockStoreData.preferences = {
         hourlyChimeEnabled: false,
         systemMonitorEnabled: false,
         contextAwarenessEnabled: false,
@@ -98,7 +98,7 @@ describe('StorageService', () => {
     });
 
     it('旧版数据缺少 birthday 时自动补全', async () => {
-      mockStoreData['petOwner'] = {
+      mockStoreData.petOwner = {
         name: '小明',
         nicknames: ['明明'],
         metDate: '2025-06-01',
@@ -112,7 +112,7 @@ describe('StorageService', () => {
     });
 
     it('旧版数据缺少 nicknames 时自动补全（防止 undefined 访问）', async () => {
-      mockStoreData['petOwner'] = {
+      mockStoreData.petOwner = {
         name: '小红',
         metDate: '2025-01-01',
         birthday: '03-15',
@@ -127,7 +127,7 @@ describe('StorageService', () => {
   describe('setPreferences - 写入路径兼容', () => {
     it('部分更新应保留其他字段的完整性', async () => {
       // 先存入旧版不完整数据
-      mockStoreData['preferences'] = {
+      mockStoreData.preferences = {
         hourlyChimeEnabled: true,
         systemMonitorEnabled: true,
         contextAwarenessEnabled: true,

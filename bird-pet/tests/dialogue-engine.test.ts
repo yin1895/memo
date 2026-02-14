@@ -145,10 +145,12 @@ describe('DialogueEngine', () => {
   describe('dedup', () => {
     it('should not repeat the same line consecutively', () => {
       // Use entries with exactly 2 lines
-      const entries: DialogueEntry[] = [{
-        scene: 'click',
-        lines: ['A', 'B'],
-      }];
+      const entries: DialogueEntry[] = [
+        {
+          scene: 'click',
+          lines: ['A', 'B'],
+        },
+      ];
       const engine = new DialogueEngine(entries);
 
       const lines = new Set<string>();

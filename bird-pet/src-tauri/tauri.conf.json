@@ -13,17 +13,17 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-    "label": "main",
-    "title": "BirdPet",
-    "width": 150,
-    "height": 150,
-    "resizable": false,
-    "decorations": false,
-    "transparent": true,
-    "alwaysOnTop": true,
-    "shadow": false,
-    "skipTaskbar": true
-  }
+        "label": "main",
+        "title": "BirdPet",
+        "width": 150,
+        "height": 150,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "shadow": false,
+        "skipTaskbar": true
+      }
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';",
@@ -44,9 +44,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": [
-        "https://github.com/yin1895/memo/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://github.com/yin1895/memo/releases/latest/download/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJDNTg2NTY4NkFFRkFFNEMKUldSTXJ1OXFhR1ZZTFBLSGp1UUZBR1lMZ0JscUhibDBIeW16WG9PZldQdXBYUWNKL0pvZEJMOUcK",
       "windows": {
         "installMode": "passive"

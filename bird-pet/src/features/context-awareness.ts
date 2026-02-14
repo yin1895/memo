@@ -34,10 +34,13 @@ const LINE_COOLDOWN = 5 * 60 * 1000;
  * key: AppContext, value: 匹配的应用名关键词（不区分大小写）
  */
 const APP_RULES: Record<Exclude<AppContext, 'unknown'>, RegExp> = {
-  coding: /code|visual studio|intellij|idea|webstorm|pycharm|sublime|vim|neovim|nvim|android studio|rider|clion|goland|cursor|windsurf/i,
+  coding:
+    /code|visual studio|intellij|idea|webstorm|pycharm|sublime|vim|neovim|nvim|android studio|rider|clion|goland|cursor|windsurf/i,
   browsing: /chrome|firefox|edge|safari|brave|opera|vivaldi|arc|msedge/i,
-  gaming: /steam|epic|riot|league|genshin|原神|valorant|minecraft|roblox|unity|unreal|bluestacks|遊戲|游戏/i,
-  music: /spotify|网易云|cloudmusic|qqmusic|qq音乐|foobar|musicbee|aimp|apple music|itunes|酷狗|酷我/i,
+  gaming:
+    /steam|epic|riot|league|genshin|原神|valorant|minecraft|roblox|unity|unreal|bluestacks|遊戲|游戏/i,
+  music:
+    /spotify|网易云|cloudmusic|qqmusic|qq音乐|foobar|musicbee|aimp|apple music|itunes|酷狗|酷我/i,
   meeting: /zoom|teams|腾讯会议|wemeet|飞书|feishu|钉钉|dingtalk|slack|discord|webex|skype/i,
   idle: /explorer|桌面|desktop/i,
 };

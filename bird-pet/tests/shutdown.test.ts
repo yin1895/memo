@@ -13,9 +13,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const localStorageMap = new Map<string, string>();
 const localStorageMock = {
   getItem: (key: string) => localStorageMap.get(key) ?? null,
-  setItem: (key: string, value: string) => { localStorageMap.set(key, value); },
-  removeItem: (key: string) => { localStorageMap.delete(key); },
-  clear: () => { localStorageMap.clear(); },
+  setItem: (key: string, value: string) => {
+    localStorageMap.set(key, value);
+  },
+  removeItem: (key: string) => {
+    localStorageMap.delete(key);
+  },
+  clear: () => {
+    localStorageMap.clear();
+  },
 };
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
@@ -98,12 +104,15 @@ function createMocks(): MockModules {
  * 构建一个隔离的 gracefulShutdown，模拟 main.ts 中的结构。
  * 使用与 main.ts 完全一致的分段 try-catch 逻辑。
  */
-function buildGracefulShutdown(mocks: MockModules, overrides?: {
-  unlistenAutostart?: Promise<() => void>;
-  unlistenMemories?: Promise<() => void>;
-  unlistenRequestQuit?: Promise<() => void>;
-  autoSaveTimer?: number;
-}) {
+function buildGracefulShutdown(
+  mocks: MockModules,
+  overrides?: {
+    unlistenAutostart?: Promise<() => void>;
+    unlistenMemories?: Promise<() => void>;
+    unlistenRequestQuit?: Promise<() => void>;
+    autoSaveTimer?: number;
+  },
+) {
   // 预初始化（与 main.ts 一致的安全默认值）
   let shutdownCalled = false;
   const unlistenAutostart = overrides?.unlistenAutostart ?? Promise.resolve(() => {});
@@ -119,7 +128,9 @@ function buildGracefulShutdown(mocks: MockModules, overrides?: {
     try {
       const pos = await mockOuterPosition();
       await mocks.storage.setWindowPosition({ x: pos.x, y: pos.y });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     try {
       clearInterval(autoSaveTimer);
@@ -127,7 +138,9 @@ function buildGracefulShutdown(mocks: MockModules, overrides?: {
       (await unlistenMemories)();
       (await unlistenRequestQuit)();
       mocks.cleanupInteraction();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 阶段 2：停止功能模块
     try {
@@ -140,25 +153,33 @@ function buildGracefulShutdown(mocks: MockModules, overrides?: {
       mocks.memory.stop();
       mocks.memoryCard.dispose();
       mocks.memoryPanel.dispose();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 阶段 3：关键数据落盘
     try {
       await mocks.memory.save();
       await mocks.storage.save();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 阶段 4：清理全局资源
     try {
       await mocks.bubble.dispose();
       mocks.bus.dispose();
       await mockUnregisterAll();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // 清除脏退出标记
     try {
       localStorage.removeItem('bird-pet:dirty-shutdown');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return { gracefulShutdown, isShutdownCalled: () => shutdownCalled };
@@ -191,7 +212,9 @@ describe('gracefulShutdown', () => {
 
   // ── 分段容错：unlisten 失败 ──
   it('unlisten 失败时仍能完成 memory.save / storage.save', async () => {
-    const failingUnlisten = Promise.resolve(() => { throw new Error('unlisten failed'); });
+    const failingUnlisten = Promise.resolve(() => {
+      throw new Error('unlisten failed');
+    });
     const { gracefulShutdown } = buildGracefulShutdown(mocks, {
       unlistenAutostart: failingUnlisten,
     });
@@ -205,7 +228,9 @@ describe('gracefulShutdown', () => {
 
   // ── 分段容错：功能模块 stop 失败 ──
   it('功能模块 stop 抛异常时仍能完成数据保存', async () => {
-    mocks.idleCare.stop.mockImplementation(() => { throw new Error('stop failed'); });
+    mocks.idleCare.stop.mockImplementation(() => {
+      throw new Error('stop failed');
+    });
     const { gracefulShutdown } = buildGracefulShutdown(mocks);
 
     await gracefulShutdown();

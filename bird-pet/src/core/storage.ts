@@ -127,7 +127,7 @@ export class StorageService {
 
   /** 递增交互次数（串行化，避免并发覆盖写） */
   async incrementInteraction(): Promise<number> {
-    const result = this._interactionLock = this._interactionLock.then(
+    const result = (this._interactionLock = this._interactionLock.then(
       async () => {
         const count = (await this.getInteractionCount()) + 1;
         await this.set(STORE_KEYS.INTERACTION_COUNT, count);
@@ -139,7 +139,7 @@ export class StorageService {
         await this.set(STORE_KEYS.INTERACTION_COUNT, count);
         return count;
       },
-    );
+    ));
     return result;
   }
 

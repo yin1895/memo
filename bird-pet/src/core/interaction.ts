@@ -122,7 +122,10 @@ export function setupInteraction(deps: InteractionDeps): () => void {
   };
 }
 
-async function setupShortcuts(clickThrough: ClickThroughManager, onQuit?: () => Promise<void>): Promise<void> {
+async function setupShortcuts(
+  clickThrough: ClickThroughManager,
+  onQuit?: () => Promise<void>,
+): Promise<void> {
   await register('CommandOrControl+Shift+P', () => clickThrough.toggle());
   await register('CommandOrControl+Shift+Q', async () => {
     if (onQuit) {

@@ -109,11 +109,10 @@ export class MemoryPanelManager {
     const snapshot = this.memory.getSnapshot();
 
     // 计算总番茄数
-    const totalPomodoros = profile.dailySummaries.reduce(
-      (sum, d) => sum + d.pomodoroCount, 0,
-    );
+    const totalPomodoros = profile.dailySummaries.reduce((sum, d) => sum + d.pomodoroCount, 0);
 
-    const tier = AFFINITY_THRESHOLDS.find(t => t.level === snapshot.affinityLevel) ?? AFFINITY_THRESHOLDS[0];
+    const tier =
+      AFFINITY_THRESHOLDS.find((t) => t.level === snapshot.affinityLevel) ?? AFFINITY_THRESHOLDS[0];
 
     const panelData = {
       affinityLevel: snapshot.affinityLevel,
@@ -125,7 +124,7 @@ export class MemoryPanelManager {
       sleepPattern: snapshot.sleepPattern,
       dominantApp: snapshot.dominantApp,
       workloadTrend: snapshot.workloadTrend,
-      dailySummaries: profile.dailySummaries.map(s => ({
+      dailySummaries: profile.dailySummaries.map((s) => ({
         date: s.date,
         interactionCount: s.interactionCount,
         pomodoroCount: s.pomodoroCount,
@@ -153,7 +152,9 @@ export class MemoryPanelManager {
     }
     try {
       await this.panelWin?.close();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     this.panelWin = null;
   }
 }
