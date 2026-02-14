@@ -17,7 +17,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { listen, emit } from '@tauri-apps/api/event';
 import { EventBus } from './events';
 import type { AppEvents } from './types';
-import { initHint, showHint, getLocalDateKey } from './utils';
+import { initHint, showHint, getLocalDateKey, calcDaysSinceMet } from './utils';
 import { AnimationEngine } from './core/animation';
 import { ClickThroughManager } from './core/click-through';
 import { MenuController, type MenuItem } from './core/menu';
@@ -78,10 +78,7 @@ async function main() {
 
     // ─── v1.0.0: 加载主人信息并注入对话引擎 ───
     const petOwner = await storage.getPetOwner();
-    const metDateObj = new Date(petOwner.metDate + 'T00:00:00');
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    const daysSinceMet = Math.max(0, Math.floor((todayDate.getTime() - metDateObj.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysSinceMet = calcDaysSinceMet(petOwner.metDate);
     dialogue.setGlobalVars({
       name: petOwner.name,
       nickname: petOwner.nicknames[0],
@@ -99,7 +96,7 @@ async function main() {
     // ─── 功能模块 ───
     const idleCare = new IdleCareScheduler(bus, bubble, dialogue, memory, quietMode);
     const hourlyChime = new HourlyChime(bubble, dialogue, storage, quietMode);
-    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue);
+    const pomodoro = new PomodoroTimer(bus, bubble, hourlyChime, dialogue, storage);
     const systemMonitor = new SystemMonitor(bubble, storage);
     const contextAwareness = new ContextAwareness(bus, bubble, dialogue, storage, quietMode);
 
@@ -108,10 +105,10 @@ async function main() {
     const greeting = new GreetingManager(bubble, dialogue, effects);
 
     // ─── v1.0.0: 回忆卡片管理器 ───
-    const memoryCard = new MemoryCardManager(bus, memory, storage, petOwner, daysSinceMet);
+    const memoryCard = new MemoryCardManager(bus, memory, storage, petOwner, petOwner.metDate);
 
     // ─── v1.0.0: 回忆面板管理器 ───
-    const memoryPanel = new MemoryPanelManager(memory, petOwner, daysSinceMet);
+    const memoryPanel = new MemoryPanelManager(memory, petOwner.metDate);
 
     // 点击宠物 → 对话引擎选取台词 + 粒子特效
     bus.on('pet:clicked', () => {
@@ -201,11 +198,12 @@ async function main() {
       try {
         idleCare.stop();
         hourlyChime.stop();
-        pomodoro.stop();
+        await pomodoro.stop();
         systemMonitor.stop();
         contextAwareness.destroy();
         quietMode.stop();
         memory.stop();
+        animation.stop();
         memoryCard.dispose();
         memoryPanel.dispose();
       } catch (e) {
@@ -268,9 +266,9 @@ async function main() {
         handler: async () => {
           await menu.closeMenu();
           if (pomodoro.state === 'idle') {
-            pomodoro.start();
+            await pomodoro.start();
           } else {
-            pomodoro.stop();
+            await pomodoro.stop();
           }
         },
       },
@@ -402,7 +400,7 @@ async function main() {
     const isFirstLaunchToday = lastActiveDate !== today;
 
     // 记录今日活跃（放在检测之后，确保比较的是昨天的值）
-    storage.recordActivity();
+    await storage.recordActivity();
 
     // 延迟 3 秒启动特殊日期检查（等气泡系统完全就绪）
     setTimeout(async () => {
@@ -419,10 +417,8 @@ async function main() {
     window.addEventListener('beforeunload', () => {
       // 仅在未进入 graceful 退出路径时标记脏退出，避免正常退出被误判
       markDirtyOnBeforeUnload(gracefulShutdownStarted);
-      // beforeunload 是同步的，无法 await 异步操作
-      // 核心保存已由 gracefulShutdown() 在各退出路径中完成
-      // 此处仅做同步清理兜底
-      gracefulShutdown();
+      // beforeunload 是同步回调，避免在此触发异步关闭流程
+      // 统一由 Rust 端 app:request-quit 触发 gracefulShutdown
     });
 
     // 静默检查更新（2 秒后，不阻塞主流程）

@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-type EventMap = {};
+type EventMap = Record<string, unknown>;
 type Listener<T> = (data: T) => void;
 
 /**

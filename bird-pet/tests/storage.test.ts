@@ -23,7 +23,7 @@ vi.mock('@tauri-apps/plugin-store', () => {
   return { LazyStore: MockLazyStore };
 });
 
-import { StorageService, type UserPreferences, type PetOwnerProfile } from '../src/core/storage';
+import { StorageService } from '../src/core/storage';
 
 describe('StorageService', () => {
   let storage: StorageService;

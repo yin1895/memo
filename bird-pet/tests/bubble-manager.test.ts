@@ -8,20 +8,22 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ─── Mock Tauri APIs ───
 
-// 记录调用顺序以验证竞态修复
-const callOrder: string[] = [];
-
-// listen 的回调存储，测试中手动触发
-let listenCallbacks: Record<string, (event: unknown) => void> = {};
-const mockUnlisten = vi.fn();
+const hoisted = vi.hoisted(() => ({
+  // 记录调用顺序以验证竞态修复
+  callOrder: [] as string[],
+  // listen 的回调存储，测试中手动触发
+  listenCallbacks: {} as Record<string, (event: unknown) => void>,
+  mockUnlisten: vi.fn(),
+  mockEmitTo: vi.fn(),
+}));
 
 vi.mock('@tauri-apps/api/event', () => ({
   listen: vi.fn(async (event: string, cb: (event: unknown) => void) => {
-    callOrder.push(`listen:${event}`);
-    listenCallbacks[event] = cb;
-    return mockUnlisten;
+    hoisted.callOrder.push(`listen:${event}`);
+    hoisted.listenCallbacks[event] = cb;
+    return hoisted.mockUnlisten;
   }),
-  emitTo: vi.fn(),
+  emitTo: hoisted.mockEmitTo,
 }));
 
 // WebviewWindow mock：once 立即触发 tauri://created
@@ -31,16 +33,16 @@ let windowErrorCb: ((e: unknown) => void) | null = null;
 vi.mock('@tauri-apps/api/webviewWindow', () => {
   class MockWebviewWindow {
     constructor() {
-      callOrder.push('new WebviewWindow');
+      hoisted.callOrder.push('new WebviewWindow');
     }
     once(event: string, cb: (...args: unknown[]) => void) {
       if (event === 'tauri://created') windowCreatedCb = cb;
       if (event === 'tauri://error') windowErrorCb = cb;
     }
-    show = vi.fn();
-    hide = vi.fn();
-    close = vi.fn();
-    setPosition = vi.fn();
+    show = vi.fn(async () => {});
+    hide = vi.fn(async () => {});
+    close = vi.fn(async () => {});
+    setPosition = vi.fn(async () => {});
   }
   return { WebviewWindow: MockWebviewWindow };
 });
@@ -62,11 +64,12 @@ import { BubbleManager } from '../src/core/bubble-manager';
 
 describe('BubbleManager', () => {
   beforeEach(() => {
-    callOrder.length = 0;
-    listenCallbacks = {};
+    hoisted.callOrder.length = 0;
+    hoisted.listenCallbacks = {};
     windowCreatedCb = null;
     windowErrorCb = null;
-    mockUnlisten.mockClear();
+    hoisted.mockUnlisten.mockClear();
+    hoisted.mockEmitTo.mockClear();
     vi.useFakeTimers();
   });
 
@@ -83,13 +86,13 @@ describe('BubbleManager', () => {
     // 模拟窗口创建成功
     windowCreatedCb?.();
     // 模拟脚本就绪
-    listenCallbacks['bubble:ready']?.({});
+    hoisted.listenCallbacks['bubble:ready']?.({});
 
     await initPromise;
 
     // 验证调用顺序：listen 必须在 new WebviewWindow 之前
-    const listenIdx = callOrder.indexOf('listen:bubble:ready');
-    const windowIdx = callOrder.indexOf('new WebviewWindow');
+    const listenIdx = hoisted.callOrder.indexOf('listen:bubble:ready');
+    const windowIdx = hoisted.callOrder.indexOf('new WebviewWindow');
     expect(listenIdx).toBeGreaterThanOrEqual(0);
     expect(windowIdx).toBeGreaterThanOrEqual(0);
     expect(listenIdx).toBeLessThan(windowIdx);
@@ -100,12 +103,12 @@ describe('BubbleManager', () => {
     const initPromise = manager.init();
 
     windowCreatedCb?.();
-    listenCallbacks['bubble:ready']?.({});
+    hoisted.listenCallbacks['bubble:ready']?.({});
 
     await initPromise;
 
     // unlisten 应被调用
-    expect(mockUnlisten).toHaveBeenCalled();
+    expect(hoisted.mockUnlisten).toHaveBeenCalled();
   });
 
   it('气泡就绪超时应 reject 而非永久挂起，且 unlisten 仍会被释放', async () => {
@@ -124,7 +127,7 @@ describe('BubbleManager', () => {
     await expectation;
 
     // 即使超时，unlisten 也应被 finally 块调用释放
-    expect(mockUnlisten).toHaveBeenCalled();
+    expect(hoisted.mockUnlisten).toHaveBeenCalled();
   }, 15_000);
 
   it('窗口创建失败应 reject', async () => {
@@ -135,5 +138,53 @@ describe('BubbleManager', () => {
     windowErrorCb?.(new Error('window creation failed'));
 
     await expect(initPromise).rejects.toThrow('window creation failed');
+  });
+
+  it('过期 dismiss（messageId 不匹配）应被丢弃，队列不会推进', async () => {
+    const manager = new BubbleManager();
+    const initPromise = manager.init();
+    windowCreatedCb?.();
+    hoisted.listenCallbacks['bubble:ready']?.({});
+    await initPromise;
+
+    manager.say({ text: 'first', duration: 500 });
+    await vi.waitFor(() => expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(1));
+    const firstPayload = hoisted.mockEmitTo.mock.calls[0][2] as { messageId: string };
+
+    manager.say({ text: 'second', duration: 500 });
+
+    // 旧消息的 dismiss 到达（messageId 不匹配）应被忽略
+    hoisted.listenCallbacks['bubble:dismissed']?.({ payload: { messageId: `${firstPayload.messageId}-stale` } });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(1);
+  });
+
+  it('高优先级抢占后，旧消息 dismiss 不会双重推进队列', async () => {
+    const manager = new BubbleManager();
+    const initPromise = manager.init();
+    windowCreatedCb?.();
+    hoisted.listenCallbacks['bubble:ready']?.({});
+    await initPromise;
+
+    manager.say({ text: 'normal-1', priority: 'normal', duration: 500 });
+    await vi.waitFor(() => expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(1));
+
+    manager.say({ text: 'normal-2', priority: 'normal', duration: 500 });
+    manager.say({ text: 'urgent', priority: 'high', duration: 500 });
+    await vi.waitFor(() => expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(2));
+
+    const firstPayload = hoisted.mockEmitTo.mock.calls[0][2] as { messageId: string };
+    const urgentPayload = hoisted.mockEmitTo.mock.calls[1][2] as { messageId: string };
+
+    // 旧消息 dismiss 到达：应被忽略，不推进到 normal-2
+    hoisted.listenCallbacks['bubble:dismissed']?.({ payload: { messageId: firstPayload.messageId } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(2);
+
+    // 当前 urgent dismiss：推进一次，播放 normal-2
+    hoisted.listenCallbacks['bubble:dismissed']?.({ payload: { messageId: urgentPayload.messageId } });
+    await vi.waitFor(() => expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(3));
+    expect((hoisted.mockEmitTo.mock.calls[2][2] as { text: string }).text).toBe('normal-2');
   });
 });

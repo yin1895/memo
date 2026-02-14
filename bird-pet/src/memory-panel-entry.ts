@@ -5,7 +5,7 @@
  * 统计数字、7 天热力图和洞察列表。
  */
 import './memory-panel.css';
-import { listen } from '@tauri-apps/api/event';
+import { listen, emit } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { getLocalDateKey } from './utils';
 
@@ -163,6 +163,9 @@ async function init(): Promise<void> {
       } catch { /* ignore */ }
     });
   }
+
+  // 通知主窗口：面板脚本已就绪
+  await emit('memory-panel:ready');
 }
 
 init();

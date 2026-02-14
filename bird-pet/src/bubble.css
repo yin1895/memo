@@ -27,7 +27,8 @@ html, body {
   color: #fff;
   font-size: 12px;
   line-height: 1.6;
-  word-break: break-all;
+  overflow-wrap: break-word;
+  word-break: normal;
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.08);

@@ -30,6 +30,37 @@ export function getLocalDateKey(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+/** 计算从认识日到今天（本地自然日）的天数差 */
+export function calcDaysSinceMet(metDate: string): number {
+  const met = new Date(`${metDate}T00:00:00`);
+  if (Number.isNaN(met.getTime())) return 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.floor((today.getTime() - met.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * 获取两个日期键之间的日期（开区间）
+ *
+ * 输入输出格式均为 YYYY-MM-DD，返回 (from, to) 之间的所有日期，不含两端。
+ */
+export function getDatesBetween(from: string, to: string): string[] {
+  const result: string[] = [];
+  const start = new Date(`${from}T00:00:00`);
+  const end = new Date(`${to}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+    return result;
+  }
+
+  const cursor = new Date(start);
+  cursor.setDate(cursor.getDate() + 1);
+  while (cursor < end) {
+    result.push(getLocalDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return result;
+}
+
 /** 异步加载图片，返回 Promise */
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {

@@ -1,104 +1,70 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_builder;
 mod shutdown_state;
 
-use active_win_pos_rs::get_active_window;
-use serde::Serialize;
-use std::sync::{Arc, Mutex};
+use app_builder::configure_builder;
+use std::sync::Arc;
 use shutdown_state::ShutdownState;
-use sysinfo::System;
 use tauri::{
+    AppHandle,
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    Emitter, Listener, Manager, State,
+    Emitter, Listener, Manager, Runtime,
 };
-use tauri_plugin_autostart::MacosLauncher;
 use std::time::Duration;
 
-/// 系统资源统计信息
-#[derive(Debug, Serialize)]
-struct SystemStats {
-    /// CPU 使用率（0-100）
-    cpu_usage: f32,
-    /// 已用内存（GB）
-    memory_used_gb: f64,
-    /// 总内存（GB）
-    memory_total_gb: f64,
-    /// 内存使用百分比（0-100）
-    memory_usage_percent: f64,
-}
-
-/// 系统监控状态（跨调用复用 System 实例）
-struct SystemMonitor {
-    system: Mutex<System>,
-}
-
-#[tauri::command]
-fn get_system_stats(monitor: State<'_, SystemMonitor>) -> SystemStats {
-    let mut sys = monitor.system.lock().expect("failed to lock system monitor");
-
-    sys.refresh_cpu_usage();
-    sys.refresh_memory();
-
-    let cpu_usage = sys.global_cpu_usage();
-    let bytes_to_gb = |b: u64| b as f64 / (1024.0 * 1024.0 * 1024.0);
-    let memory_used = bytes_to_gb(sys.used_memory());
-    let memory_total = bytes_to_gb(sys.total_memory());
-    let memory_percent = if memory_total > 0.0 {
-        (memory_used / memory_total) * 100.0
-    } else {
-        0.0
-    };
-
-    SystemStats {
-        cpu_usage,
-        memory_used_gb: memory_used,
-        memory_total_gb: memory_total,
-        memory_usage_percent: memory_percent,
+fn initiate_shutdown<R: Runtime>(app: &AppHandle<R>, state: Arc<ShutdownState>) {
+    // 防止重复触发，避免创建多组监听器/线程
+    if !state.try_begin_shutdown() {
+        return;
     }
-}
 
-/// 当前活跃窗口信息
-#[derive(Debug, Serialize)]
-struct ActiveWindowInfo {
-    /// 应用/进程名称
-    app_name: String,
-    /// 窗口标题
-    title: String,
-}
-
-#[tauri::command]
-fn get_active_window_info() -> Option<ActiveWindowInfo> {
-    match get_active_window() {
-        Ok(win) => Some(ActiveWindowInfo {
-            app_name: win.app_name,
-            title: win.title,
-        }),
-        Err(_) => None,
+    // 通知前端执行统一清理后退出
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.emit("app:request-quit", ());
     }
+
+    // 前端清理完成后会 emit "app:shutdown-complete"，收到后提前安全退出
+    let state_for_ack = Arc::clone(&state);
+    let handle_for_once = app.clone();
+    let handle_for_ack_exit = app.clone();
+    handle_for_once.once("app:shutdown-complete", move |_| {
+        state_for_ack.mark_acked();
+        handle_for_ack_exit.exit(0);
+    });
+
+    // 安全超时兜底：若前端未响应则 8 秒后强制退出
+    let handle_for_timeout = app.clone();
+    std::thread::spawn(move || {
+        // 每 200ms 检查一次，共等待 8 秒（40 次）
+        for _ in 0..40 {
+            if state.is_acked() {
+                // 前端已完成清理（once 回调会负责退出）
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+        // 超时，强制退出
+        handle_for_timeout.exit(0);
+    });
 }
 
 fn main() {
-    // 初始化系统监控（做一次基线刷新以便后续 CPU 读数准确）
-    let mut sys = System::new();
-    sys.refresh_cpu_usage();
-
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec![]),
-        ))
-        .manage(SystemMonitor {
-            system: Mutex::new(sys),
-        })
-        .manage(Arc::new(ShutdownState::default()))
-        .invoke_handler(tauri::generate_handler![get_system_stats, get_active_window_info])
+    configure_builder(tauri::Builder::default())
         .setup(|app| {
+            // 仅接管主窗口关闭，其他窗口（如 memory-panel）保持默认关闭行为
+            if let Some(main_window) = app.get_webview_window("main") {
+                let app_handle = app.handle().clone();
+                let shutdown_state = app.state::<Arc<ShutdownState>>().inner().clone();
+                main_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        initiate_shutdown(&app_handle, Arc::clone(&shutdown_state));
+                    }
+                });
+            }
+
             // ─── 系统托盘 ───
             let show_item = MenuItem::with_id(app, "show", "🐦 显示小鸟", true, None::<&str>)?;
             let memories_item = MenuItem::with_id(app, "memories", "📖 查看回忆", true, None::<&str>)?;
@@ -142,38 +108,7 @@ fn main() {
                     }
                     "quit" => {
                         let shutdown_state = app.state::<Arc<ShutdownState>>().inner().clone();
-                        // 防止重复点击 quit 触发多组监听器/线程
-                        if !shutdown_state.try_begin_shutdown() {
-                            return;
-                        }
-
-                        // 通知前端执行统一清理后退出
-                        if let Some(w) = app.get_webview_window("main") {
-                            let _ = w.emit("app:request-quit", ());
-                        }
-                        // 安全超时兜底：若前端未响应则 8 秒后强制退出
-                        // 前端清理完成后会 emit "app:shutdown-complete"，收到后提前安全退出
-                        let shutdown_state_for_ack = Arc::clone(&shutdown_state);
-                        let handle_for_once = app.clone();
-                        let handle_for_ack_exit = app.clone();
-                        // once 监听：收到 ACK 后自动移除监听器，避免累积
-                        handle_for_once.once("app:shutdown-complete", move |_| {
-                            shutdown_state_for_ack.mark_acked();
-                            handle_for_ack_exit.exit(0);
-                        });
-                        let handle_for_timeout = app.clone();
-                        std::thread::spawn(move || {
-                            // 每 200ms 检查一次，共等待 8 秒（40 次）
-                            for _ in 0..40 {
-                                if shutdown_state.is_acked() {
-                                    // 前端已完成清理（once 回调会负责退出）
-                                    return;
-                                }
-                                std::thread::sleep(Duration::from_millis(200));
-                            }
-                            // 超时，强制退出
-                            handle_for_timeout.exit(0);
-                        });
+                        initiate_shutdown(app, shutdown_state);
                     }
                     _ => {}
                 })

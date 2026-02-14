@@ -4,11 +4,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// - shutdown_started: 是否已进入退出流程（防重入）
 /// - shutdown_acked: 前端是否已回传清理完成 ACK
 #[derive(Default)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub struct ShutdownState {
     shutdown_started: AtomicBool,
     shutdown_acked: AtomicBool,
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 impl ShutdownState {
     /// 尝试进入退出流程。
     /// 首次调用返回 true，后续重复调用返回 false。

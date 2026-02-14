@@ -18,7 +18,7 @@ import type {
 } from '../types';
 import type { AppContext } from '../features/dialogue-engine';
 import { StorageService, STORE_KEYS } from './storage';
-import { getLocalDateKey } from '../utils';
+import { getDatesBetween, getLocalDateKey } from '../utils';
 
 /** 滚动窗口天数 */
 const ROLLING_WINDOW_DAYS = 7;
@@ -267,33 +267,31 @@ export class MemorySystem {
 
     if (this.profile.lastActiveDate === today) return; // 今天已汇总
 
-    const yesterday = this.profile.lastActiveDate;
+    const lastActiveDate = this.profile.lastActiveDate;
 
-    if (yesterday) {
-      // 汇总昨日事件
-      const yesterdayEvents = this.events.filter((e) => {
-        const d = getLocalDateKey(new Date(e.timestamp));
-        return d === yesterday;
-      });
+    if (lastActiveDate) {
+      const missedDates = getDatesBetween(lastActiveDate, today);
+      const datesToSummarize = [lastActiveDate, ...missedDates];
 
-      if (yesterdayEvents.length > 0) {
-        const summary = this.buildDailySummary(yesterday, yesterdayEvents);
-        this.profile.dailySummaries.push(summary);
-
-        // 保持最多 ROLLING_WINDOW_DAYS 条
-        if (this.profile.dailySummaries.length > ROLLING_WINDOW_DAYS) {
-          this.profile.dailySummaries =
-            this.profile.dailySummaries.slice(-ROLLING_WINDOW_DAYS);
+      for (const date of datesToSummarize) {
+        const dayEvents = this.events.filter((e) => {
+          const d = getLocalDateKey(new Date(e.timestamp));
+          return d === date;
+        });
+        if (dayEvents.length > 0) {
+          const summary = this.buildDailySummary(date, dayEvents);
+          this.profile.dailySummaries.push(summary);
         }
       }
 
-      // 更新连续天数
-      const yesterdayDate = new Date(yesterday);
-      const todayDate = new Date(today);
-      const diffMs = todayDate.getTime() - yesterdayDate.getTime();
-      const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      // 保持最多 ROLLING_WINDOW_DAYS 条
+      if (this.profile.dailySummaries.length > ROLLING_WINDOW_DAYS) {
+        this.profile.dailySummaries =
+          this.profile.dailySummaries.slice(-ROLLING_WINDOW_DAYS);
+      }
 
-      if (diffDays === 1) {
+      // 只有 lastActiveDate 恰好是昨天时视为连续
+      if (missedDates.length === 0) {
         this.profile.streakDays++;
       } else {
         this.profile.streakDays = 1;

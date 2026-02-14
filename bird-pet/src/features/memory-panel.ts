@@ -6,9 +6,9 @@
  * 展示亲密度进度、统计数字、7 天活动热力图和洞察列表。
  */
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { emitTo } from '@tauri-apps/api/event';
+import { emitTo, listen } from '@tauri-apps/api/event';
 import type { MemorySystem } from '../core/memory';
-import type { PetOwnerProfile } from '../core/storage';
+import { calcDaysSinceMet } from '../utils';
 
 /** 亲密度中文名 */
 const AFFINITY_NAMES: Record<number, string> = {
@@ -24,12 +24,12 @@ const PANEL_HEIGHT = 520;
 
 export class MemoryPanelManager {
   private memory: MemorySystem;
-  private daysSinceMet: number;
+  private metDate: string;
   private panelWin: WebviewWindow | null = null;
 
-  constructor(memory: MemorySystem, _petOwner: PetOwnerProfile, daysSinceMet: number) {
+  constructor(memory: MemorySystem, metDate: string) {
     this.memory = memory;
-    this.daysSinceMet = daysSinceMet;
+    this.metDate = metDate;
   }
 
   /** 打开或聚焦回忆面板 */
@@ -47,6 +47,15 @@ export class MemoryPanelManager {
         this.panelWin = null;
       }
     }
+
+    // 先注册 ready 监听，再创建窗口，消除事件竞态
+    let readyResolve: (() => void) | null = null;
+    const readyPromise = new Promise<void>((resolve) => {
+      readyResolve = resolve;
+    });
+    const readyUnlistenPromise = listen('memory-panel:ready', () => {
+      readyResolve?.();
+    });
 
     // 创建新面板窗口
     this.panelWin = new WebviewWindow('memory-panel', {
@@ -69,8 +78,21 @@ export class MemoryPanelManager {
       this.panelWin!.once('tauri://error', (e) => reject(e));
     });
 
-    // 延迟一点发送数据，等 JS 初始化
-    setTimeout(() => this.sendPanelData(), 300);
+    try {
+      await Promise.race([
+        readyPromise,
+        new Promise<void>((_, reject) =>
+          setTimeout(() => reject(new Error('memory-panel:ready timeout')), 3000),
+        ),
+      ]);
+    } catch (e) {
+      console.warn('回忆面板就绪超时，继续尝试发送数据:', e);
+    } finally {
+      const readyUnlisten = await readyUnlistenPromise;
+      readyUnlisten();
+    }
+
+    await this.sendPanelData();
   }
 
   /** 向面板窗口发送数据 */
@@ -99,7 +121,7 @@ export class MemoryPanelManager {
       totalInteractions: profile.totalInteractions,
       nextAffinityAt: tier.next,
       streak: snapshot.streak,
-      daysSinceMet: this.daysSinceMet,
+      daysSinceMet: calcDaysSinceMet(this.metDate),
       sleepPattern: snapshot.sleepPattern,
       dominantApp: snapshot.dominantApp,
       workloadTrend: snapshot.workloadTrend,

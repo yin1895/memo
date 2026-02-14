@@ -11,6 +11,7 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emitTo, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
+import type { BubbleDismissedPayload, BubbleShowPayload } from '../types';
 import { MessageQueue, type BubbleMessage, type QueuedMessage } from './message-queue';
 
 /** 气泡窗口尺寸（逻辑像素） */
@@ -29,6 +30,8 @@ export class BubbleManager {
   private moveUnlisten: (() => void) | null = null;
   private dismissUnlisten: (() => void) | null = null;
   private hideTimer: number | null = null;
+  private messageSeq = 0;
+  private currentMessageId = '';
 
   constructor() {
     this.queue = new MessageQueue();
@@ -44,12 +47,12 @@ export class BubbleManager {
 
   async init(): Promise<void> {
     // 先注册 bubble:ready 监听，再创建窗口，消除竞态
-    let readyResolve: () => void;
+    let readyResolve: (() => void) | null = null;
     const readyPromise = new Promise<void>((resolve) => {
       readyResolve = resolve;
     });
     const readyUnsubPromise = listen('bubble:ready', () => {
-      readyResolve();
+      readyResolve?.();
     });
 
     this.bubbleWin = new WebviewWindow('bubble', {
@@ -95,8 +98,8 @@ export class BubbleManager {
     });
 
     // 监听气泡自行消失（动画结束后）
-    const fn = await listen('bubble:dismissed', () => {
-      this.onBubbleDismissed();
+    const fn = await listen<BubbleDismissedPayload>('bubble:dismissed', (event) => {
+      this.onBubbleDismissed(event.payload.messageId);
     });
     this.dismissUnlisten = fn;
   }
@@ -115,6 +118,7 @@ export class BubbleManager {
   async dispose(): Promise<void> {
     this.queue.clear();
     this.clearHideTimer();
+    this.currentMessageId = '';
     this.moveUnlisten?.();
     this.dismissUnlisten?.();
     try { await this.bubbleWin?.close(); } catch { /* 忽略 */ }
@@ -126,27 +130,36 @@ export class BubbleManager {
     if (!this.bubbleWin) return;
 
     this.clearHideTimer();
+    const messageId = `bubble-${++this.messageSeq}`;
+    this.currentMessageId = messageId;
+
     await this.repositionBubble();
     await this.bubbleWin.show();
-    await emitTo('bubble', 'bubble:show', {
+    const payload: BubbleShowPayload = {
       text: msg.text,
       duration: msg.duration,
-    });
+      messageId,
+    };
+    await emitTo('bubble', 'bubble:show', payload);
 
     // 计算总展示时间 = 打字时间 + 持续时间 + 动画余量
     const typewriterMs = msg.text.length * CHAR_INTERVAL + 100;
     const totalMs = typewriterMs + msg.duration + 450;
 
     // 兜底定时器：如果 bubble:dismissed 未及时到达，自动推进队列
-    this.hideTimer = window.setTimeout(() => {
-      this.onBubbleDismissed();
+    this.hideTimer = setTimeout(() => {
+      this.onBubbleDismissed(messageId);
     }, totalMs);
   }
 
-  private onBubbleDismissed(): void {
+  private onBubbleDismissed(messageId: string): void {
+    if (!messageId || messageId !== this.currentMessageId) {
+      return;
+    }
     this.clearHideTimer();
     // 隐藏窗口
     this.bubbleWin?.hide().catch(() => {});
+    this.currentMessageId = '';
     // 推进消息队列
     this.queue.done();
   }
