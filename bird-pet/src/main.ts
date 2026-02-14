@@ -223,7 +223,6 @@ function bindBusinessEvents(core: CoreModules): void {
 }
 
 function initLifecycle(core: CoreModules, features: FeatureModules): LifecycleController {
-  let shutdownCalled = false;
   let gracefulShutdownStarted = false;
   let cleanupInteraction: () => void = () => {};
   let unlistenAutostart: Promise<() => void> = Promise.resolve(() => {});
@@ -232,8 +231,7 @@ function initLifecycle(core: CoreModules, features: FeatureModules): LifecycleCo
   let autoSaveTimer = 0;
 
   const gracefulShutdown = async (): Promise<void> => {
-    if (shutdownCalled) return;
-    shutdownCalled = true;
+    if (gracefulShutdownStarted) return;
     gracefulShutdownStarted = true;
 
     try {
@@ -264,7 +262,7 @@ function initLifecycle(core: CoreModules, features: FeatureModules): LifecycleCo
       core.memory.stop();
       core.animation.stop();
       features.memoryCard.dispose();
-      features.memoryPanel.dispose();
+      await features.memoryPanel.dispose();
     } catch (e) {
       console.warn('gracefulShutdown: 停止功能模块失败:', e);
     }
@@ -431,19 +429,35 @@ async function startModules(core: CoreModules, features: FeatureModules): Promis
 }
 
 async function runDailyStartupFlow(core: CoreModules, features: FeatureModules): Promise<void> {
+  const delay = (ms: number) => new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+
   const lastActiveDate = await core.storage.get<string>(STORE_KEYS.LAST_ACTIVE_DATE, '');
   const today = getLocalDateKey();
   const isFirstLaunchToday = lastActiveDate !== today;
 
   await core.storage.recordActivity();
-
-  setTimeout(async () => {
+  await delay(3000);
+  try {
     await features.specialDates.checkToday();
-    setTimeout(() => features.greeting.checkGreeting(isFirstLaunchToday), 2000);
-    if (isFirstLaunchToday) {
-      setTimeout(() => features.memoryCard.showDailyCard(), 3000);
+  } catch (e) {
+    console.warn('执行特殊日期启动流程失败:', e);
+  }
+  await delay(2000);
+  try {
+    features.greeting.checkGreeting(isFirstLaunchToday);
+  } catch (e) {
+    console.warn('执行问候启动流程失败:', e);
+  }
+  if (isFirstLaunchToday) {
+    await delay(3000);
+    try {
+      await features.memoryCard.showDailyCard();
+    } catch (e) {
+      console.warn('展示每日回忆卡片失败:', e);
     }
-  }, 3000);
+  }
 }
 
 async function main() {

@@ -13,3 +13,6 @@ export const AFFINITY_THRESHOLDS = [
   { level: 3, min: 200, next: 500 },
   { level: 4, min: 500, next: Infinity },
 ] as const;
+
+/** 气泡打字机单字间隔（毫秒） */
+export const BUBBLE_CHAR_INTERVAL = 40;

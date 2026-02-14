@@ -38,6 +38,7 @@ export class MemorySystem {
   private events: MemoryEvent[] = [];
   private profile: UserProfile = { ...DEFAULT_PROFILE };
   private unsubscribers: (() => void)[] = [];
+  private startupInsightTimer: number | null = null;
 
   constructor(bus: EventBus<AppEvents>, storage: StorageService) {
     this.bus = bus;
@@ -94,6 +95,10 @@ export class MemorySystem {
       unsub();
     }
     this.unsubscribers = [];
+    if (this.startupInsightTimer !== null) {
+      clearTimeout(this.startupInsightTimer);
+      this.startupInsightTimer = null;
+    }
   }
 
   // ─── 模式分析 API ───
@@ -204,7 +209,11 @@ export class MemorySystem {
    * 延迟 5 秒执行，避免与启动动画冲突
    */
   private emitStartupInsights(): void {
-    window.setTimeout(() => {
+    if (this.startupInsightTimer !== null) {
+      clearTimeout(this.startupInsightTimer);
+    }
+    this.startupInsightTimer = window.setTimeout(() => {
+      this.startupInsightTimer = null;
       const streak = this.getStreak();
       const sleepPattern = this.getSleepPattern();
 

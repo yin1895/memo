@@ -23,11 +23,13 @@ export class AnimationEngine {
   private running = false;
   private rafId = 0;
   private _actionLock = false;
+  private readonly tickFrame: FrameRequestCallback;
 
   constructor(canvas: HTMLCanvasElement, bus: EventBus<AppEvents>) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d', { alpha: true })!;
     this.bus = bus;
+    this.tickFrame = (ts) => this.tick(ts);
   }
 
   // ─── 公开 API ───
@@ -89,7 +91,7 @@ export class AnimationEngine {
     this.lastTick = 0;
     this.play('idle');
     this.drawFrame();
-    this.rafId = requestAnimationFrame(ts => this.tick(ts));
+    this.rafId = requestAnimationFrame(this.tickFrame);
   }
 
   /** 停止动画循环并重置循环状态 */
@@ -155,6 +157,6 @@ export class AnimationEngine {
       this.drawFrame();
     }
 
-    this.rafId = requestAnimationFrame(t => this.tick(t));
+    this.rafId = requestAnimationFrame(this.tickFrame);
   }
 }
