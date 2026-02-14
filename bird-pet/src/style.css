@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -27,14 +28,18 @@ html, body {
   background: rgba(20, 20, 20, 0.92);
   backdrop-filter: blur(12px);
   color: #fff;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
   z-index: 9999;
-  
+
   /* 添加过渡动画 */
   opacity: 1;
   transform: scale(1);
   transform-origin: top left;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
   pointer-events: auto;
 }
 
@@ -68,15 +73,18 @@ html, body {
   line-height: 1.2;
   user-select: none;
   white-space: nowrap;
-  transition: background 0.1s ease, transform 0.1s ease, opacity 0.1s ease;
+  transition:
+    background 0.1s ease,
+    transform 0.1s ease,
+    opacity 0.1s ease;
 }
 
 .menu-item:hover {
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .menu-item:active {
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   transform: scale(0.98);
 }
 
@@ -89,16 +97,17 @@ html, body {
 .menu-sep {
   height: 1px;
   margin: 4px 6px;
-  background: rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.12);
 }
-
 
 canvas#pet {
   width: 150px;
   height: 150px;
   display: block;
   background: transparent;
-  transition: opacity 0.3s ease, filter 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
 }
 
 /* 穿透模式视觉反馈 */
@@ -114,11 +123,13 @@ canvas#pet {
   padding: 4px 6px;
   font-size: 11px;
   border-radius: 6px;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0, 0, 0, 0.55);
   color: white;
   pointer-events: none;
 }
-.hidden { display: none; }
+.hidden {
+  display: none;
+}
 
 /* ========== 更新对话框 ========== */
 #update-overlay {
@@ -206,7 +217,10 @@ canvas#pet {
   padding: 7px 0;
   font-size: 11px;
   cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease;
   width: 100%;
   color: #fff;
   background: rgba(255, 255, 255, 0.12);
@@ -266,9 +280,17 @@ canvas#pet {
 
 /* 心形飘升 */
 @keyframes float-up {
-  0%   { transform: translateY(0) scale(1); opacity: 1; }
-  60%  { opacity: 0.8; }
-  100% { transform: translateY(-80px) scale(0.4); opacity: 0; }
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-80px) scale(0.4);
+    opacity: 0;
+  }
 }
 .fx-float-up {
   animation-name: float-up;
@@ -276,10 +298,22 @@ canvas#pet {
 
 /* 星星闪烁 */
 @keyframes sparkle {
-  0%   { transform: scale(0) rotate(0deg); opacity: 0; }
-  30%  { transform: scale(1.3) rotate(120deg); opacity: 1; }
-  60%  { transform: scale(0.8) rotate(240deg); opacity: 0.7; }
-  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.3) rotate(120deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.8) rotate(240deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(0) rotate(360deg);
+    opacity: 0;
+  }
 }
 .fx-sparkle {
   animation-name: sparkle;
@@ -287,11 +321,25 @@ canvas#pet {
 
 /* 音符摇摆飘升 */
 @keyframes note-sway {
-  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-  25%  { transform: translate(12px, -20px) rotate(15deg); }
-  50%  { transform: translate(-8px, -45px) rotate(-10deg); opacity: 0.7; }
-  75%  { transform: translate(10px, -65px) rotate(12deg); opacity: 0.4; }
-  100% { transform: translate(-5px, -85px) rotate(0deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(12px, -20px) rotate(15deg);
+  }
+  50% {
+    transform: translate(-8px, -45px) rotate(-10deg);
+    opacity: 0.7;
+  }
+  75% {
+    transform: translate(10px, -65px) rotate(12deg);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-5px, -85px) rotate(0deg);
+    opacity: 0;
+  }
 }
 .fx-note-sway {
   animation-name: note-sway;
@@ -299,9 +347,17 @@ canvas#pet {
 
 /* Zzz 飘升 */
 @keyframes zzz-float {
-  0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
-  20%  { opacity: 1; }
-  100% { transform: translate(25px, -50px) scale(1.3); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(25px, -50px) scale(1.3);
+    opacity: 0;
+  }
 }
 .fx-zzz-float {
   animation-name: zzz-float;
@@ -309,11 +365,24 @@ canvas#pet {
 
 /* 弹跳 */
 @keyframes bounce-fx {
-  0%   { transform: translateY(0) scale(1); opacity: 1; }
-  30%  { transform: translateY(-30px) scale(1.2); }
-  50%  { transform: translateY(-10px) scale(0.9); opacity: 0.8; }
-  70%  { transform: translateY(-25px) scale(1.1); }
-  100% { transform: translateY(0) scale(0.5); opacity: 0; }
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: translateY(-30px) scale(1.2);
+  }
+  50% {
+    transform: translateY(-10px) scale(0.9);
+    opacity: 0.8;
+  }
+  70% {
+    transform: translateY(-25px) scale(1.1);
+  }
+  100% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0;
+  }
 }
 .fx-bounce {
   animation-name: bounce-fx;
@@ -321,9 +390,18 @@ canvas#pet {
 
 /* 彩纸飘落（纪念日/生日） */
 @keyframes confetti-fall {
-  0%   { transform: translateY(-20px) rotate(0deg) scale(1); opacity: 1; }
-  40%  { transform: translateY(30px) rotate(180deg) scale(1.1); opacity: 0.9; }
-  100% { transform: translateY(100px) rotate(360deg) scale(0.3); opacity: 0; }
+  0% {
+    transform: translateY(-20px) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(30px) rotate(180deg) scale(1.1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(100px) rotate(360deg) scale(0.3);
+    opacity: 0;
+  }
 }
 .fx-confetti {
   animation-name: confetti-fall;
@@ -331,10 +409,22 @@ canvas#pet {
 
 /* 阳光光芒（小太阳致敬） */
 @keyframes sunshine-glow {
-  0%   { transform: scale(0) rotate(0deg); opacity: 0; }
-  30%  { transform: scale(1.5) rotate(45deg); opacity: 1; }
-  60%  { transform: scale(1) rotate(90deg); opacity: 0.8; }
-  100% { transform: scale(1.8) rotate(180deg); opacity: 0; }
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.5) rotate(45deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1) rotate(90deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.8) rotate(180deg);
+    opacity: 0;
+  }
 }
 .fx-sunshine {
   animation-name: sunshine-glow;

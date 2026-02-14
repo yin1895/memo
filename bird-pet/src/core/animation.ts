@@ -36,14 +36,12 @@ export class AnimationEngine {
 
   /** 加载动画清单与所有精灵图 */
   async load(): Promise<void> {
-    this.manifest = await fetch('/manifest.json').then(r => r.json());
+    this.manifest = await fetch('/manifest.json').then((r) => r.json());
 
     const [fw, fh] = this.manifest.frame_size;
     this.setCanvasSize(fw, fh);
 
-    const uniqueSheets = new Set(
-      Object.values(this.manifest.animations).map(a => a.sheet),
-    );
+    const uniqueSheets = new Set(Object.values(this.manifest.animations).map((a) => a.sheet));
     for (const sheet of uniqueSheets) {
       this.sheets.set(sheet, await loadImage('/' + sheet));
     }

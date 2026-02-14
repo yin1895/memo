@@ -154,46 +154,118 @@ const CONTEXT_IDLE_LINES = [
 // ────────────────────────────────────────
 
 export const DIALOGUE_ENTRIES: DialogueEntry[] = [
-  { scene: 'click',           lines: CLICK_LINES },
-  { scene: 'idle_care',       lines: IDLE_CARE_LINES },
-  { scene: 'affirmation',     lines: AFFIRMATION_LINES },
-  { scene: 'pomodoro_start',  lines: POMODORO_START_LINES },
-  { scene: 'pomodoro_break',  lines: POMODORO_BREAK_LINES },
+  { scene: 'click', lines: CLICK_LINES },
+  { scene: 'idle_care', lines: IDLE_CARE_LINES },
+  { scene: 'affirmation', lines: AFFIRMATION_LINES },
+  { scene: 'pomodoro_start', lines: POMODORO_START_LINES },
+  { scene: 'pomodoro_break', lines: POMODORO_BREAK_LINES },
   { scene: 'pomodoro_resume', lines: POMODORO_RESUME_LINES },
 
   // 整点报时台词（按小时段分组）
   { scene: 'hourly', lines: ['午夜了！🌙 早点休息好不好？'], conditions: { hourRange: [0, 1] } },
-  { scene: 'hourly', lines: ['凌晨 1 点了…你还在忙吗？注意身体！'], conditions: { hourRange: [1, 2] } },
+  {
+    scene: 'hourly',
+    lines: ['凌晨 1 点了…你还在忙吗？注意身体！'],
+    conditions: { hourRange: [1, 2] },
+  },
   { scene: 'hourly', lines: ['凌晨 2 点！真的该睡了！😴'], conditions: { hourRange: [2, 3] } },
   { scene: 'hourly', lines: ['凌晨 3 点…拜托，快去睡觉！'], conditions: { hourRange: [3, 4] } },
-  { scene: 'hourly', lines: ['天快亮了！如果还没睡…现在还来得及！'], conditions: { hourRange: [4, 5] } },
-  { scene: 'hourly', lines: ['早上 5 点～起这么早？好勤奋！🌅'], conditions: { hourRange: [5, 6] } },
-  { scene: 'hourly', lines: ['6 点啦！早安！新的一天开始了！☀️'], conditions: { hourRange: [6, 7] } },
+  {
+    scene: 'hourly',
+    lines: ['天快亮了！如果还没睡…现在还来得及！'],
+    conditions: { hourRange: [4, 5] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['早上 5 点～起这么早？好勤奋！🌅'],
+    conditions: { hourRange: [5, 6] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['6 点啦！早安！新的一天开始了！☀️'],
+    conditions: { hourRange: [6, 7] },
+  },
   { scene: 'hourly', lines: ['早上 7 点！吃早餐了吗？🥐'], conditions: { hourRange: [7, 8] } },
   { scene: 'hourly', lines: ['8 点！元气满满地开始工作吧！💪'], conditions: { hourRange: [8, 9] } },
   { scene: 'hourly', lines: ['上午 9 点～专注时间到！加油！'], conditions: { hourRange: [9, 10] } },
-  { scene: 'hourly', lines: ['10 点啦！状态正好，继续冲！🔥'], conditions: { hourRange: [10, 11] } },
-  { scene: 'hourly', lines: ['11 点了～再坚持一下就到午饭时间了！'], conditions: { hourRange: [11, 12] } },
-  { scene: 'hourly', lines: ['中午 12 点！午餐时间！🍱 好好吃饭哦！'], conditions: { hourRange: [12, 13] } },
-  { scene: 'hourly', lines: ['下午 1 点～饭后适当休息一下吧！'], conditions: { hourRange: [13, 14] } },
-  { scene: 'hourly', lines: ['下午 2 点！最容易犯困的时候，精神！💥'], conditions: { hourRange: [14, 15] } },
-  { scene: 'hourly', lines: ['下午 3 点～来杯下午茶提提神？☕'], conditions: { hourRange: [15, 16] } },
-  { scene: 'hourly', lines: ['下午 4 点！冲刺时间！目标快达成了！'], conditions: { hourRange: [16, 17] } },
-  { scene: 'hourly', lines: ['5 点啦！今天的任务完成了吗？📋'], conditions: { hourRange: [17, 18] } },
-  { scene: 'hourly', lines: ['傍晚 6 点～辛苦了！该放松一下啦！🌇'], conditions: { hourRange: [18, 19] } },
-  { scene: 'hourly', lines: ['晚上 7 点！享受晚餐和自由时光吧！'], conditions: { hourRange: [19, 20] } },
-  { scene: 'hourly', lines: ['晚上 8 点～做些自己喜欢的事吧！🎮'], conditions: { hourRange: [20, 21] } },
-  { scene: 'hourly', lines: ['晚上 9 点！今天过得怎么样？😊'], conditions: { hourRange: [21, 22] } },
-  { scene: 'hourly', lines: ['晚上 10 点了～差不多该准备休息啦！🌛'], conditions: { hourRange: [22, 23] } },
-  { scene: 'hourly', lines: ['晚上 11 点！别熬夜哦，早睡早起！💤'], conditions: { hourRange: [23, 24] } },
+  {
+    scene: 'hourly',
+    lines: ['10 点啦！状态正好，继续冲！🔥'],
+    conditions: { hourRange: [10, 11] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['11 点了～再坚持一下就到午饭时间了！'],
+    conditions: { hourRange: [11, 12] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['中午 12 点！午餐时间！🍱 好好吃饭哦！'],
+    conditions: { hourRange: [12, 13] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 1 点～饭后适当休息一下吧！'],
+    conditions: { hourRange: [13, 14] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 2 点！最容易犯困的时候，精神！💥'],
+    conditions: { hourRange: [14, 15] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 3 点～来杯下午茶提提神？☕'],
+    conditions: { hourRange: [15, 16] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['下午 4 点！冲刺时间！目标快达成了！'],
+    conditions: { hourRange: [16, 17] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['5 点啦！今天的任务完成了吗？📋'],
+    conditions: { hourRange: [17, 18] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['傍晚 6 点～辛苦了！该放松一下啦！🌇'],
+    conditions: { hourRange: [18, 19] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 7 点！享受晚餐和自由时光吧！'],
+    conditions: { hourRange: [19, 20] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 8 点～做些自己喜欢的事吧！🎮'],
+    conditions: { hourRange: [20, 21] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 9 点！今天过得怎么样？😊'],
+    conditions: { hourRange: [21, 22] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 10 点了～差不多该准备休息啦！🌛'],
+    conditions: { hourRange: [22, 23] },
+  },
+  {
+    scene: 'hourly',
+    lines: ['晚上 11 点！别熬夜哦，早睡早起！💤'],
+    conditions: { hourRange: [23, 24] },
+  },
 
   // 行为感知台词
-  { scene: 'context_coding',   lines: CONTEXT_CODING_LINES },
+  { scene: 'context_coding', lines: CONTEXT_CODING_LINES },
   { scene: 'context_browsing', lines: CONTEXT_BROWSING_LINES },
-  { scene: 'context_gaming',   lines: CONTEXT_GAMING_LINES },
-  { scene: 'context_music',    lines: CONTEXT_MUSIC_LINES },
-  { scene: 'context_meeting',  lines: CONTEXT_MEETING_LINES },
-  { scene: 'context_idle',     lines: CONTEXT_IDLE_LINES },
+  { scene: 'context_gaming', lines: CONTEXT_GAMING_LINES },
+  { scene: 'context_music', lines: CONTEXT_MUSIC_LINES },
+  { scene: 'context_meeting', lines: CONTEXT_MEETING_LINES },
+  { scene: 'context_idle', lines: CONTEXT_IDLE_LINES },
 
   // ────────────────────────────────────────
   // 反思性对话台词（v0.4.0 记忆系统驱动）
@@ -244,10 +316,7 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   // 亲密度反思
   {
     scene: 'reflective_affinity',
-    lines: [
-      '感觉和你越来越熟了呢～嘿嘿 😊',
-      '我们的互动越来越多了！好开心～',
-    ],
+    lines: ['感觉和你越来越熟了呢～嘿嘿 😊', '我们的互动越来越多了！好开心～'],
     conditions: { affinityLevel: 2 },
   },
   {
@@ -299,10 +368,7 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
   },
   {
     scene: 'reflective_app_habit',
-    lines: [
-      '最近冲浪好多！看到什么有趣的东西了吗？🌐',
-      '互联网探索家！有什么新发现要分享吗？',
-    ],
+    lines: ['最近冲浪好多！看到什么有趣的东西了吗？🌐', '互联网探索家！有什么新发现要分享吗？'],
     conditions: { dominantApp: 'browsing' },
   },
 
@@ -329,7 +395,7 @@ export const DIALOGUE_ENTRIES: DialogueEntry[] = [
       '情人节快乐！💕 今天的空气里都是甜甜的味道～',
       '2月14日！爱你的心每天都在，今天特别多一点 💝',
       '情人节到啦！🌹 不管多忙，记得感受身边的爱哦！',
-      'Happy Valentine\'s Day！💌 你值得世界上所有的温柔～',
+      "Happy Valentine's Day！💌 你值得世界上所有的温柔～",
       '今天是表达爱的日子！我先来：啾啾！超喜欢你！💗',
     ],
   },

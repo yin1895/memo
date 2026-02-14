@@ -9,13 +9,7 @@
  * 隐私：所有数据仅存储在本地 pet-state.json，不会上传。
  */
 import type { EventBus } from '../events';
-import type {
-  AppEvents,
-  MemoryEvent,
-  DailySummary,
-  UserProfile,
-  MemorySnapshot,
-} from '../types';
+import type { AppEvents, MemoryEvent, DailySummary, UserProfile, MemorySnapshot } from '../types';
 import type { AppContext } from '../features/dialogue-engine';
 import { StorageService, STORE_KEYS } from './storage';
 import { AFFINITY_THRESHOLDS } from '../constants';
@@ -50,14 +44,10 @@ export class MemorySystem {
   /** 启动：加载数据、注册事件监听、汇总昨日 */
   async start(): Promise<void> {
     // 加载持久化数据
-    this.events = await this.storage.get<MemoryEvent[]>(
-      STORE_KEYS.MEMORY_EVENTS,
-      [],
-    );
-    this.profile = await this.storage.get<UserProfile>(
-      STORE_KEYS.USER_PROFILE,
-      { ...DEFAULT_PROFILE },
-    );
+    this.events = await this.storage.get<MemoryEvent[]>(STORE_KEYS.MEMORY_EVENTS, []);
+    this.profile = await this.storage.get<UserProfile>(STORE_KEYS.USER_PROFILE, {
+      ...DEFAULT_PROFILE,
+    });
 
     // 执行日终汇总（检查是否跨天）
     this.summarizeDay();
@@ -67,8 +57,12 @@ export class MemorySystem {
 
     // 注册事件监听
     this.unsubscribers.push(
-      this.bus.on('pet:clicked', () => this.recordEvent({ type: 'interaction', timestamp: Date.now() })),
-      this.bus.on('pet:dragged', () => this.recordEvent({ type: 'interaction', timestamp: Date.now() })),
+      this.bus.on('pet:clicked', () =>
+        this.recordEvent({ type: 'interaction', timestamp: Date.now() }),
+      ),
+      this.bus.on('pet:dragged', () =>
+        this.recordEvent({ type: 'interaction', timestamp: Date.now() }),
+      ),
       this.bus.on('context:changed', ({ from, to }) =>
         this.recordEvent({
           type: 'context_switch',
@@ -175,10 +169,8 @@ export class MemorySystem {
     const recent3 = summaries.slice(-3);
     const prev = summaries.slice(0, -3);
 
-    const avgRecent =
-      recent3.reduce((s, d) => s + d.interactionCount, 0) / recent3.length;
-    const avgPrev =
-      prev.reduce((s, d) => s + d.interactionCount, 0) / prev.length;
+    const avgRecent = recent3.reduce((s, d) => s + d.interactionCount, 0) / recent3.length;
+    const avgPrev = prev.reduce((s, d) => s + d.interactionCount, 0) / prev.length;
 
     const ratio = avgPrev > 0 ? avgRecent / avgPrev : 1;
     if (ratio > 1.3) return 'increasing';
@@ -286,8 +278,7 @@ export class MemorySystem {
 
       // 保持最多 ROLLING_WINDOW_DAYS 条
       if (this.profile.dailySummaries.length > ROLLING_WINDOW_DAYS) {
-        this.profile.dailySummaries =
-          this.profile.dailySummaries.slice(-ROLLING_WINDOW_DAYS);
+        this.profile.dailySummaries = this.profile.dailySummaries.slice(-ROLLING_WINDOW_DAYS);
       }
 
       // 只有 lastActiveDate 恰好是昨天时视为连续
@@ -305,24 +296,17 @@ export class MemorySystem {
   }
 
   /** 从事件列表构建每日汇总 */
-  private buildDailySummary(
-    date: string,
-    events: MemoryEvent[],
-  ): DailySummary {
+  private buildDailySummary(date: string, events: MemoryEvent[]): DailySummary {
     const hours = events.map((e) => new Date(e.timestamp).getHours());
     const minHour = Math.min(...hours);
     const maxHour = Math.max(...hours);
 
     const interactions = events.filter((e) => e.type === 'interaction').length;
-    const pomodoros = events.filter(
-      (e) => e.type === 'pomodoro_complete',
-    ).length;
+    const pomodoros = events.filter((e) => e.type === 'pomodoro_complete').length;
 
     // 统计上下文持续时长（简化：按切换次数估算每段 15 分钟）
     const contextDurations: Partial<Record<AppContext, number>> = {};
-    const contextSwitches = events.filter(
-      (e) => e.type === 'context_switch' && e.data?.to,
-    );
+    const contextSwitches = events.filter((e) => e.type === 'context_switch' && e.data?.to);
     for (const ev of contextSwitches) {
       const ctx = ev.data!.to as AppContext;
       contextDurations[ctx] = (contextDurations[ctx] ?? 0) + 15;

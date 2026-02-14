@@ -33,11 +33,7 @@ export interface BubbleDismissedPayload {
 import type { AppContext } from './features/dialogue-engine';
 
 /** 记忆事件类型 */
-export type MemoryEventType =
-  | 'interaction'
-  | 'context_switch'
-  | 'pomodoro_complete'
-  | 'app_active';
+export type MemoryEventType = 'interaction' | 'context_switch' | 'pomodoro_complete' | 'app_active';
 
 /** 单条记忆事件 */
 export interface MemoryEvent {

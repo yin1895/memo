@@ -46,10 +46,13 @@ describe('QuietModeManager', () => {
 
   it('should suppress during quiet hours (same-day range)', async () => {
     const hour = new Date().getHours();
-    const qm = new QuietModeManager(bus, mockStorage({
-      quietHoursStart: hour,
-      quietHoursEnd: hour + 2,
-    }));
+    const qm = new QuietModeManager(
+      bus,
+      mockStorage({
+        quietHoursStart: hour,
+        quietHoursEnd: hour + 2,
+      }),
+    );
     await qm.start();
     expect(qm.shouldSuppress()).toBe('quiet_hours');
     expect(qm.isFullSilent()).toBe(true);
@@ -58,21 +61,27 @@ describe('QuietModeManager', () => {
   it('should suppress during quiet hours (cross-midnight range)', async () => {
     const hour = new Date().getHours();
     // Create a range that definitely includes current hour
-    const qm = new QuietModeManager(bus, mockStorage({
-      quietHoursStart: (hour + 23) % 24, // 1 hour before → wraps if needed
-      quietHoursEnd: (hour + 2) % 24,
-    }));
+    const qm = new QuietModeManager(
+      bus,
+      mockStorage({
+        quietHoursStart: (hour + 23) % 24, // 1 hour before → wraps if needed
+        quietHoursEnd: (hour + 2) % 24,
+      }),
+    );
     await qm.start();
     expect(qm.shouldSuppress()).toBe('quiet_hours');
   });
 
   it('should not suppress when outside quiet hours', async () => {
     const hour = new Date().getHours();
-    const qm = new QuietModeManager(bus, mockStorage({
-      quietHoursStart: (hour + 5) % 24,
-      quietHoursEnd: (hour + 7) % 24,
-      nightModeEnabled: false,
-    }));
+    const qm = new QuietModeManager(
+      bus,
+      mockStorage({
+        quietHoursStart: (hour + 5) % 24,
+        quietHoursEnd: (hour + 7) % 24,
+        nightModeEnabled: false,
+      }),
+    );
     await qm.start();
     expect(qm.shouldSuppress()).toBeNull();
   });

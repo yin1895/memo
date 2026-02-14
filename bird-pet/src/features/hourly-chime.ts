@@ -17,7 +17,12 @@ export class HourlyChime {
   private timer: number | null = null;
   private enabled = true;
 
-  constructor(bubble: BubbleManager, dialogue: DialogueEngine, storage?: StorageService, quietMode?: QuietModeManager) {
+  constructor(
+    bubble: BubbleManager,
+    dialogue: DialogueEngine,
+    storage?: StorageService,
+    quietMode?: QuietModeManager,
+  ) {
     this.bubble = bubble;
     this.dialogue = dialogue;
     this.storage = storage ?? null;

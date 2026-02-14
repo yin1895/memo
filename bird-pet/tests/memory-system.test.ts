@@ -66,14 +66,11 @@ describe('MemorySystem summarizeDay', () => {
       dailySummaries: [],
     };
 
-    const memory = new MemorySystem(
-      createBusMock(),
-      createStorageMock(events, profile) as any,
-    );
+    const memory = new MemorySystem(createBusMock(), createStorageMock(events, profile) as any);
     await memory.start();
 
     const nextProfile = memory.getProfile();
-    expect(nextProfile.dailySummaries.map(s => s.date)).toEqual([lastActiveDate, day2, day1]);
+    expect(nextProfile.dailySummaries.map((s) => s.date)).toEqual([lastActiveDate, day2, day1]);
     expect(nextProfile.streakDays).toBe(1);
     expect(nextProfile.lastActiveDate).toBe(today);
   });
@@ -81,9 +78,7 @@ describe('MemorySystem summarizeDay', () => {
   it('仅跨一天时应在原 streak 基础上 +1', async () => {
     const yesterday = getDateKeyDaysAgo(1);
     const today = getDateKeyDaysAgo(0);
-    const events: MemoryEvent[] = [
-      { type: 'interaction', timestamp: toTimestamp(yesterday, 9) },
-    ];
+    const events: MemoryEvent[] = [{ type: 'interaction', timestamp: toTimestamp(yesterday, 9) }];
 
     const profile: UserProfile = {
       totalInteractions: 3,
@@ -92,14 +87,11 @@ describe('MemorySystem summarizeDay', () => {
       dailySummaries: [],
     };
 
-    const memory = new MemorySystem(
-      createBusMock(),
-      createStorageMock(events, profile) as any,
-    );
+    const memory = new MemorySystem(createBusMock(), createStorageMock(events, profile) as any);
     await memory.start();
 
     const nextProfile = memory.getProfile();
-    expect(nextProfile.dailySummaries.map(s => s.date)).toEqual([yesterday]);
+    expect(nextProfile.dailySummaries.map((s) => s.date)).toEqual([yesterday]);
     expect(nextProfile.streakDays).toBe(5);
     expect(nextProfile.lastActiveDate).toBe(today);
   });

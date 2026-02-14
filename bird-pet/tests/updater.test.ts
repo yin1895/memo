@@ -42,7 +42,7 @@ function createMockElements(): UpdateElements {
       }),
       removeEventListener: vi.fn((event: string, fn: EventListener) => {
         if (listeners[event]) {
-          listeners[event] = listeners[event].filter(l => l.fn !== fn);
+          listeners[event] = listeners[event].filter((l) => l.fn !== fn);
         }
       }),
       // 辅助：触发事件并返回回调数量
@@ -51,8 +51,8 @@ function createMockElements(): UpdateElements {
         const count = cbs.length;
         // 触发所有回调，once 的移除掉
         const toCall = [...cbs];
-        listeners[event] = cbs.filter(l => !l.once);
-        toCall.forEach(l => l.fn(new Event(event)));
+        listeners[event] = cbs.filter((l) => !l.once);
+        toCall.forEach((l) => l.fn(new Event(event)));
         return count;
       },
       _listenerCount: (event: string) => (listeners[event] || []).length,
@@ -73,9 +73,18 @@ function createMockElements(): UpdateElements {
 
 /** 带 _trigger 和 _listenerCount 辅助方法的增强类型 */
 type MockEl = UpdateElements & {
-  btnNow: UpdateElements['btnNow'] & { _trigger: (e: string) => number; _listenerCount: (e: string) => number };
-  btnLater: UpdateElements['btnLater'] & { _trigger: (e: string) => number; _listenerCount: (e: string) => number };
-  btnSkip: UpdateElements['btnSkip'] & { _trigger: (e: string) => number; _listenerCount: (e: string) => number };
+  btnNow: UpdateElements['btnNow'] & {
+    _trigger: (e: string) => number;
+    _listenerCount: (e: string) => number;
+  };
+  btnLater: UpdateElements['btnLater'] & {
+    _trigger: (e: string) => number;
+    _listenerCount: (e: string) => number;
+  };
+  btnSkip: UpdateElements['btnSkip'] & {
+    _trigger: (e: string) => number;
+    _listenerCount: (e: string) => number;
+  };
 };
 
 describe('UpdateController', () => {
@@ -148,10 +157,7 @@ describe('UpdateController', () => {
 
     el.btnSkip._trigger('click');
 
-    expect(localStorage.setItem).toHaveBeenCalledWith(
-      'bird-pet-ignored-version',
-      '3.0.0',
-    );
+    expect(localStorage.setItem).toHaveBeenCalledWith('bird-pet-ignored-version', '3.0.0');
   });
 
   it('无更新时手动检查应提示最新版本', async () => {

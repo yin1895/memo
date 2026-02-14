@@ -68,8 +68,8 @@ function renderPanel(data: PanelData): void {
   affinityHearts.textContent = '❤️'.repeat(data.affinityLevel) + '🤍'.repeat(4 - data.affinityLevel);
 
   // 计算进度条
-  const tier = AFFINITY_THRESHOLDS.find(t => t.level === data.affinityLevel)
-    ?? AFFINITY_THRESHOLDS[0];
+  const tier =
+    AFFINITY_THRESHOLDS.find((t) => t.level === data.affinityLevel) ?? AFFINITY_THRESHOLDS[0];
   if (tier.next === Infinity) {
     affinityBar.style.width = '100%';
     affinityText.textContent = '已达到最高亲密度！';
@@ -97,7 +97,7 @@ function renderPanel(data: PanelData): void {
     days.push(getLocalDateKey(d));
   }
 
-  const summaryMap = new Map(data.dailySummaries.map(s => [s.date, s]));
+  const summaryMap = new Map(data.dailySummaries.map((s) => [s.date, s]));
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
   for (const dateStr of days) {
@@ -154,7 +154,9 @@ async function init(): Promise<void> {
     header.addEventListener('mousedown', async () => {
       try {
         await getCurrentWindow().startDragging();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     });
   }
 

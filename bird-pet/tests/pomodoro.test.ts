@@ -93,9 +93,7 @@ describe('PomodoroTimer persistence', () => {
     await vi.advanceTimersByTimeAsync(25 * 60 * 1000);
 
     expect(timer.completed).toBe(1);
-    await vi.waitFor(() =>
-      expect(storage.set).toHaveBeenCalledWith(STORE_KEYS.POMODORO_COUNT, 1),
-    );
+    await vi.waitFor(() => expect(storage.set).toHaveBeenCalledWith(STORE_KEYS.POMODORO_COUNT, 1));
 
     await timer.stop();
   });

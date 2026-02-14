@@ -112,10 +112,7 @@ describe('SystemMonitor', () => {
   });
 
   it('systemMonitorEnabled=false 时不启动', async () => {
-    const monitor = new SystemMonitor(
-      mockBubble(),
-      mockStorage({ systemMonitorEnabled: false }),
-    );
+    const monitor = new SystemMonitor(mockBubble(), mockStorage({ systemMonitorEnabled: false }));
     await monitor.start();
 
     vi.advanceTimersByTime(60_000);

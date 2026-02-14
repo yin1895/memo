@@ -9,7 +9,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
   background: linear-gradient(135deg, #fef9ef 0%, #fde8d0 50%, #fce4ec 100%);
   color: #5d4037;
   -webkit-user-select: none;
@@ -156,12 +156,25 @@ body {
   margin-top: 2px;
 }
 
-.heatmap-day.level-0 { background: #f5e6d8; }
-.heatmap-day.level-1 { background: #ffccbc; }
-.heatmap-day.level-2 { background: #ff8a65; }
-.heatmap-day.level-3 { background: #ff5722; color: #fff; }
-.heatmap-day.level-3 .day-count { color: #fff; }
-.heatmap-day.level-3 .day-label { color: rgba(255,255,255,0.8); }
+.heatmap-day.level-0 {
+  background: #f5e6d8;
+}
+.heatmap-day.level-1 {
+  background: #ffccbc;
+}
+.heatmap-day.level-2 {
+  background: #ff8a65;
+}
+.heatmap-day.level-3 {
+  background: #ff5722;
+  color: #fff;
+}
+.heatmap-day.level-3 .day-count {
+  color: #fff;
+}
+.heatmap-day.level-3 .day-label {
+  color: rgba(255, 255, 255, 0.8);
+}
 
 /* ─── 洞察 ─── */
 .insights-list {
@@ -190,15 +203,29 @@ body {
 
 /* ─── 动画 ─── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panel-section {
   animation: fadeIn 0.4s ease both;
 }
 
-.panel-section:nth-child(2) { animation-delay: 0.05s; }
-.panel-section:nth-child(3) { animation-delay: 0.10s; }
-.panel-section:nth-child(4) { animation-delay: 0.15s; }
-.panel-section:nth-child(5) { animation-delay: 0.20s; }
+.panel-section:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.panel-section:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.panel-section:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.panel-section:nth-child(5) {
+  animation-delay: 0.2s;
+}

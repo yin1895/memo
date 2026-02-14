@@ -143,8 +143,13 @@ describe('MemoryCardManager - milestone detection', () => {
     const { manager, snapshot, profile } = createManager({
       streak: 400,
       triggeredMilestones: [
-        'streak:7', 'streak:14', 'streak:30', 'streak:50',
-        'streak:100', 'streak:200', 'streak:365',
+        'streak:7',
+        'streak:14',
+        'streak:30',
+        'streak:50',
+        'streak:100',
+        'streak:200',
+        'streak:365',
       ],
     });
     const result = await (manager as any).detectMilestone(snapshot, profile);

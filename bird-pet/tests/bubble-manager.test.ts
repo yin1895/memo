@@ -154,7 +154,9 @@ describe('BubbleManager', () => {
     manager.say({ text: 'second', duration: 500 });
 
     // 旧消息的 dismiss 到达（messageId 不匹配）应被忽略
-    hoisted.listenCallbacks['bubble:dismissed']?.({ payload: { messageId: `${firstPayload.messageId}-stale` } });
+    hoisted.listenCallbacks['bubble:dismissed']?.({
+      payload: { messageId: `${firstPayload.messageId}-stale` },
+    });
     await vi.advanceTimersByTimeAsync(0);
 
     expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(1);
@@ -178,12 +180,16 @@ describe('BubbleManager', () => {
     const urgentPayload = hoisted.mockEmitTo.mock.calls[1][2] as { messageId: string };
 
     // 旧消息 dismiss 到达：应被忽略，不推进到 normal-2
-    hoisted.listenCallbacks['bubble:dismissed']?.({ payload: { messageId: firstPayload.messageId } });
+    hoisted.listenCallbacks['bubble:dismissed']?.({
+      payload: { messageId: firstPayload.messageId },
+    });
     await vi.advanceTimersByTimeAsync(0);
     expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(2);
 
     // 当前 urgent dismiss：推进一次，播放 normal-2
-    hoisted.listenCallbacks['bubble:dismissed']?.({ payload: { messageId: urgentPayload.messageId } });
+    hoisted.listenCallbacks['bubble:dismissed']?.({
+      payload: { messageId: urgentPayload.messageId },
+    });
     await vi.waitFor(() => expect(hoisted.mockEmitTo).toHaveBeenCalledTimes(3));
     expect((hoisted.mockEmitTo.mock.calls[2][2] as { text: string }).text).toBe('normal-2');
   });

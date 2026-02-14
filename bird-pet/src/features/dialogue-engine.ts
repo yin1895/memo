@@ -192,10 +192,7 @@ export class DialogueEngine {
   }
 
   /** 检查条件是否满足（v0.4.0 扩展记忆条件） */
-  private matchConditions(
-    cond: DialogueCondition,
-    ctx: Partial<DialogueContext>,
-  ): boolean {
+  private matchConditions(cond: DialogueCondition, ctx: Partial<DialogueContext>): boolean {
     // 小时范围
     if (cond.hourRange && ctx.hour !== undefined) {
       const [start, end] = cond.hourRange;
@@ -234,10 +231,7 @@ export class DialogueEngine {
    * 将 {key} 占位符替换为 ctx 中的同名字段值，
    * 并注入全局模板变量（nickname 每次随机取）
    */
-  private applyTemplate(
-    line: string,
-    ctx?: Partial<DialogueContext>,
-  ): string {
+  private applyTemplate(line: string, ctx?: Partial<DialogueContext>): string {
     // 构建合并的变量池
     const vars: Record<string, unknown> = {};
 
@@ -245,9 +239,8 @@ export class DialogueEngine {
     if (this.globalVars) {
       vars.name = this.globalVars.name;
       // 每次随机从称呼池取
-      vars.nickname = this.globalVars.nicknames[
-        Math.floor(Math.random() * this.globalVars.nicknames.length)
-      ];
+      vars.nickname =
+        this.globalVars.nicknames[Math.floor(Math.random() * this.globalVars.nicknames.length)];
       vars.daysSinceMet = this.globalVars.daysSinceMet;
       vars.metDate = this.globalVars.metDate;
     }

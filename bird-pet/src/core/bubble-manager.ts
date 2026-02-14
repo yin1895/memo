@@ -34,7 +34,7 @@ export class BubbleManager {
 
   constructor() {
     this.queue = new MessageQueue();
-    this.queue.onPlay(msg => this.displayMessage(msg));
+    this.queue.onPlay((msg) => this.displayMessage(msg));
   }
 
   /**
@@ -120,7 +120,11 @@ export class BubbleManager {
     this.currentMessageId = '';
     this.moveUnlisten?.();
     this.dismissUnlisten?.();
-    try { await this.bubbleWin?.close(); } catch { /* 忽略 */ }
+    try {
+      await this.bubbleWin?.close();
+    } catch {
+      /* 忽略 */
+    }
   }
 
   // ─── 内部方法 ───
