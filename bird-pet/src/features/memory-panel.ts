@@ -19,6 +19,7 @@ export class MemoryPanelManager {
   private memory: MemorySystem;
   private metDate: string;
   private panelWin: WebviewWindow | null = null;
+  private creatingPromise: Promise<void> | null = null;
 
   constructor(memory: MemorySystem, metDate: string) {
     this.memory = memory;
@@ -27,6 +28,11 @@ export class MemoryPanelManager {
 
   /** 打开或聚焦回忆面板 */
   async showPanel(): Promise<void> {
+    if (this.creatingPromise) {
+      await this.creatingPromise;
+      return;
+    }
+
     // 如果窗口已存在，聚焦并刷新数据
     const existing = await WebviewWindow.getByLabel('memory-panel');
     if (existing) {
@@ -41,6 +47,15 @@ export class MemoryPanelManager {
       }
     }
 
+    this.creatingPromise = this.createPanelWindow();
+    try {
+      await this.creatingPromise;
+    } finally {
+      this.creatingPromise = null;
+    }
+  }
+
+  private async createPanelWindow(): Promise<void> {
     // 先注册 ready 监听，再创建窗口，消除事件竞态
     let readyResolve: (() => void) | null = null;
     const readyPromise = new Promise<void>((resolve) => {
@@ -128,9 +143,17 @@ export class MemoryPanelManager {
   }
 
   /** 清理资源 */
-  dispose(): void {
+  async dispose(): Promise<void> {
+    if (this.creatingPromise) {
+      try {
+        await this.creatingPromise;
+      } catch {
+        // ignore
+      }
+    }
     try {
-      this.panelWin?.close();
+      await this.panelWin?.close();
     } catch { /* ignore */ }
+    this.panelWin = null;
   }
 }

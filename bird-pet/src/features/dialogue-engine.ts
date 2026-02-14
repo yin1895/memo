@@ -188,7 +188,7 @@ export class DialogueEngine {
     if (entries.length === 0) return null;
 
     const allLines = entries.flatMap((e) => e.lines);
-    return this.pickWithDedup(allLines);
+    return this.applyTemplate(this.pickWithDedup(allLines));
   }
 
   /** 检查条件是否满足（v0.4.0 扩展记忆条件） */

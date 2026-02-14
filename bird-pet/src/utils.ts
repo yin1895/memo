@@ -1,6 +1,7 @@
 import { CONFIG } from './config';
 
 let hintEl: HTMLDivElement | null = null;
+let hintTimer: number | null = null;
 
 /** 初始化提示元素引用（在 main 中调用一次） */
 export function initHint(el: HTMLDivElement): void {
@@ -10,9 +11,16 @@ export function initHint(el: HTMLDivElement): void {
 /** 显示短暂提示信息 */
 export function showHint(text: string, ms: number = CONFIG.HINT_DURATION): void {
   if (!hintEl) return;
+  if (hintTimer !== null) {
+    clearTimeout(hintTimer);
+    hintTimer = null;
+  }
   hintEl.textContent = text;
   hintEl.classList.remove('hidden');
-  window.setTimeout(() => hintEl?.classList.add('hidden'), ms);
+  hintTimer = window.setTimeout(() => {
+    hintEl?.classList.add('hidden');
+    hintTimer = null;
+  }, ms);
 }
 
 /**

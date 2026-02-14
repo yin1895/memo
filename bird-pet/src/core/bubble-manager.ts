@@ -12,6 +12,7 @@ import { emitTo, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { PhysicalPosition } from '@tauri-apps/api/dpi';
 import type { BubbleDismissedPayload, BubbleShowPayload } from '../types';
+import { BUBBLE_CHAR_INTERVAL } from '../constants';
 import { MessageQueue, type BubbleMessage, type QueuedMessage } from './message-queue';
 
 /** 气泡窗口尺寸（逻辑像素） */
@@ -19,8 +20,6 @@ const BUBBLE_WIDTH = 220;
 const BUBBLE_HEIGHT = 110;
 /** 气泡底部与宠物窗口顶部的重叠像素 */
 const BUBBLE_OVERLAP = 4;
-/** 打字机每字耗时（与 bubble-entry.ts 保持一致） */
-const CHAR_INTERVAL = 40;
 
 export class BubbleManager {
   private mainWin = getCurrentWindow();
@@ -143,7 +142,7 @@ export class BubbleManager {
     await emitTo('bubble', 'bubble:show', payload);
 
     // 计算总展示时间 = 打字时间 + 持续时间 + 动画余量
-    const typewriterMs = msg.text.length * CHAR_INTERVAL + 100;
+    const typewriterMs = msg.text.length * BUBBLE_CHAR_INTERVAL + 100;
     const totalMs = typewriterMs + msg.duration + 450;
 
     // 兜底定时器：如果 bubble:dismissed 未及时到达，自动推进队列

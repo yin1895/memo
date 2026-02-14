@@ -7,13 +7,11 @@
 import './bubble.css';
 import { listen, emit } from '@tauri-apps/api/event';
 import type { BubbleDismissedPayload, BubbleShowPayload } from './types';
+import { BUBBLE_CHAR_INTERVAL } from './constants';
 
 /** 来自主窗口的显示消息载荷 */
 const bubble = document.getElementById('bubble')!;
 const textEl = document.getElementById('bubble-text')!;
-
-/** 每字打字间隔（毫秒） */
-const CHAR_INTERVAL = 40;
 
 let typewriterTimer: number | null = null;
 let hideTimer: number | null = null;
@@ -56,7 +54,7 @@ function showBubble(text: string, duration: number, messageId: string): void {
       // 打字完成后等待 duration 再消失
       hideTimer = window.setTimeout(() => hideBubble(), duration);
     }
-  }, CHAR_INTERVAL);
+  }, BUBBLE_CHAR_INTERVAL);
 }
 
 function hideBubble(): void {
@@ -70,7 +68,9 @@ function hideBubble(): void {
     bubble.classList.add('bubble-hidden');
     // 通知主窗口气泡已消失
     const payload: BubbleDismissedPayload = { messageId: dismissMessageId };
-    emit('bubble:dismissed', payload);
+    emit('bubble:dismissed', payload).catch((err) => {
+      console.warn('发送 bubble:dismissed 失败:', err);
+    });
   }, 350);
 }
 

@@ -68,7 +68,8 @@ function renderPanel(data: PanelData): void {
   affinityHearts.textContent = '❤️'.repeat(data.affinityLevel) + '🤍'.repeat(4 - data.affinityLevel);
 
   // 计算进度条
-  const tier = AFFINITY_THRESHOLDS.find(t => t.level === data.affinityLevel)!;
+  const tier = AFFINITY_THRESHOLDS.find(t => t.level === data.affinityLevel)
+    ?? AFFINITY_THRESHOLDS[0];
   if (tier.next === Infinity) {
     affinityBar.style.width = '100%';
     affinityText.textContent = '已达到最高亲密度！';

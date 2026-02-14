@@ -26,6 +26,8 @@ export class QuietModeManager {
   private bus: EventBus<AppEvents>;
   private storage: StorageService;
   private preferences: UserPreferences | null = null;
+  private lastPreferencesLoadAt = 0;
+  private isRefreshingPreferences = false;
 
   /** 当前是否处于会议 */
   private inMeeting = false;
@@ -39,6 +41,8 @@ export class QuietModeManager {
   private readonly NIGHT_END = 6;
   /** 专注保护阈值（ms）：30 分钟 */
   private readonly DEEP_FOCUS_THRESHOLD = 30 * 60 * 1000;
+  /** 偏好刷新间隔（ms） */
+  private readonly PREFERENCES_REFRESH_INTERVAL = 60_000;
 
   constructor(bus: EventBus<AppEvents>, storage: StorageService) {
     this.bus = bus;
@@ -46,7 +50,7 @@ export class QuietModeManager {
   }
 
   async start(): Promise<void> {
-    this.preferences = await this.storage.getPreferences();
+    await this.reloadPreferences();
 
     // 监听行为上下文变更
     this.unsubscribers.push(
@@ -71,11 +75,24 @@ export class QuietModeManager {
     this.unsubscribers = [];
   }
 
+  /** 重新加载用户偏好（供外部在设置变更后主动调用） */
+  async reloadPreferences(): Promise<void> {
+    if (this.isRefreshingPreferences) return;
+    this.isRefreshingPreferences = true;
+    try {
+      this.preferences = await this.storage.getPreferences();
+      this.lastPreferencesLoadAt = Date.now();
+    } finally {
+      this.isRefreshingPreferences = false;
+    }
+  }
+
   /**
    * 检查当前是否应该抑制主动消息
    * @returns 抑制原因（null = 不抑制）
    */
   shouldSuppress(): SuppressReason {
+    this.maybeRefreshPreferences();
     const hour = new Date().getHours();
 
     // 1. 勿扰时段
@@ -114,6 +131,7 @@ export class QuietModeManager {
    * 是否处于深夜模式（用于降低自动动作概率）
    */
   isNightMode(): boolean {
+    this.maybeRefreshPreferences();
     if (!this.preferences?.nightModeEnabled) return false;
     const hour = new Date().getHours();
     return hour >= this.NIGHT_START || hour < this.NIGHT_END;
@@ -125,5 +143,12 @@ export class QuietModeManager {
   isFullSilent(): boolean {
     const reason = this.shouldSuppress();
     return reason === 'quiet_hours' || reason === 'meeting';
+  }
+
+  private maybeRefreshPreferences(): void {
+    if (Date.now() - this.lastPreferencesLoadAt < this.PREFERENCES_REFRESH_INTERVAL) {
+      return;
+    }
+    void this.reloadPreferences();
   }
 }
