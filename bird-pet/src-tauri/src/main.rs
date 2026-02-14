@@ -8,7 +8,7 @@ use sysinfo::System;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    Emitter, Manager, State,
+    Emitter, Listener, Manager, State,
 };
 use tauri_plugin_autostart::MacosLauncher;
 use std::time::Duration;
