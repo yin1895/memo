@@ -92,8 +92,8 @@ export class ContextAwareness {
     }
   }
 
-  /** 销毁（停止 + 清理引用） */
-  destroy(): void {
+  /** 释放资源（停止轮询） */
+  dispose(): void {
     this.stop();
   }
 
