@@ -99,7 +99,7 @@ export type AppEvents = {
   'pomodoro:break': void;
   'pomodoro:stop': void;
   /** 行为上下文变更（v0.3.0） */
-  'context:changed': { from: string; to: string };
+  'context:changed': { from: AppContext; to: AppContext };
   /** 记忆系统洞察事件（v0.4.0） */
   'memory:insight': { type: string; message: string };
   /** 记忆系统里程碑事件（v1.0.0） */

@@ -95,6 +95,15 @@ describe('QuietModeManager', () => {
     expect(qm.shouldSuppress()).not.toBe('meeting');
   });
 
+  it('should clear meeting state when context changes to unknown', async () => {
+    const qm = new QuietModeManager(bus, mockStorage({ nightModeEnabled: false }));
+    await qm.start();
+
+    bus.emit('context:changed', { from: 'idle', to: 'meeting' });
+    bus.emit('context:changed', { from: 'meeting', to: 'unknown' });
+    expect(qm.shouldSuppress()).not.toBe('meeting');
+  });
+
   it('should detect deep focus after coding threshold', async () => {
     const qm = new QuietModeManager(bus, mockStorage({ nightModeEnabled: false }));
     await qm.start();
