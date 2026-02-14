@@ -8,15 +8,8 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emitTo, listen } from '@tauri-apps/api/event';
 import type { MemorySystem } from '../core/memory';
+import { AFFINITY_NAMES, AFFINITY_THRESHOLDS } from '../constants';
 import { calcDaysSinceMet } from '../utils';
-
-/** 亲密度中文名 */
-const AFFINITY_NAMES: Record<number, string> = {
-  1: '初识',
-  2: '熟悉',
-  3: '亲密',
-  4: '挚友',
-};
 
 /** 面板窗口尺寸 */
 const PANEL_WIDTH = 380;
@@ -105,15 +98,7 @@ export class MemoryPanelManager {
       (sum, d) => sum + d.pomodoroCount, 0,
     );
 
-    // 下一亲密度阈值
-    const THRESHOLDS = [
-      { level: 1, min: 0, next: 50 },
-      { level: 2, min: 50, next: 200 },
-      { level: 3, min: 200, next: 500 },
-      { level: 4, min: 500, next: Infinity },
-    ];
-
-    const tier = THRESHOLDS.find(t => t.level === snapshot.affinityLevel) ?? THRESHOLDS[0];
+    const tier = AFFINITY_THRESHOLDS.find(t => t.level === snapshot.affinityLevel) ?? AFFINITY_THRESHOLDS[0];
 
     const panelData = {
       affinityLevel: snapshot.affinityLevel,

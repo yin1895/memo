@@ -12,15 +12,8 @@ import type { EventBus } from '../events';
 import type { AppEvents, MemorySnapshot, UserProfile } from '../types';
 import type { MemorySystem } from '../core/memory';
 import type { PetOwnerProfile, StorageService } from '../core/storage';
+import { AFFINITY_NAMES } from '../constants';
 import { calcDaysSinceMet } from '../utils';
-
-/** 亲密度等级名称 */
-const AFFINITY_NAMES: Record<number, string> = {
-  1: '初识',
-  2: '熟悉',
-  3: '亲密',
-  4: '挚友',
-};
 
 /** 里程碑阈值 */
 const STREAK_MILESTONES = [7, 14, 30, 50, 100, 200, 365];

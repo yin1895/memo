@@ -6,10 +6,10 @@
     <title>BirdPet Memories</title>
   </head>
   <body>
-    <div id="memory-panel-app">
-      <div class="panel-header">
+    <div id="memory-panel-app" role="main" aria-label="回忆面板">
+      <div class="panel-header" role="banner">
         <span class="panel-icon">📖</span>
-        <span class="panel-title">我们的回忆</span>
+        <span class="panel-title" aria-label="回忆面板标题">我们的回忆</span>
       </div>
 
       <!-- 亲密度进度 -->
@@ -47,13 +47,13 @@
       <!-- 7 天活动热力 -->
       <div class="panel-section">
         <div class="section-title">📅 最近 7 天</div>
-        <div id="heatmap" class="heatmap-grid"></div>
+        <div id="heatmap" class="heatmap-grid" role="img" aria-label="最近七天互动热力图"></div>
       </div>
 
       <!-- 作息洞察 -->
       <div class="panel-section">
         <div class="section-title">💡 小鸟的观察</div>
-        <div id="insights" class="insights-list"></div>
+        <div id="insights" class="insights-list" role="list" aria-label="行为洞察列表"></div>
       </div>
 
       <div class="panel-footer">
