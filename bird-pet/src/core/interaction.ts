@@ -107,7 +107,9 @@ export function setupInteraction(deps: InteractionDeps): () => void {
   }, CONFIG.AUTO_ACTION_INTERVAL);
 
   // ─── 全局快捷键 ───
-  const shortcutsReady = setupShortcuts(clickThrough, onQuit);
+  const shortcutsReady = setupShortcuts(clickThrough, onQuit).catch((error) => {
+    console.error('注册全局快捷键失败:', error);
+  });
 
   // ─── 清理 ───
   return () => {
@@ -118,7 +120,11 @@ export function setupInteraction(deps: InteractionDeps): () => void {
     canvas.removeEventListener('pointerleave', clearDrag);
     app.removeEventListener('pointerdown', onAppPointerDown);
     window.removeEventListener('keydown', onKeydown);
-    shortcutsReady.then(() => unregisterAll());
+    void shortcutsReady.finally(() => {
+      unregisterAll().catch((error) => {
+        console.warn('清理全局快捷键失败:', error);
+      });
+    });
   };
 }
 
@@ -127,12 +133,21 @@ async function setupShortcuts(
   onQuit?: () => Promise<void>,
 ): Promise<void> {
   await register('CommandOrControl+Shift+P', () => clickThrough.toggle());
-  await register('CommandOrControl+Shift+Q', async () => {
-    if (onQuit) {
-      await onQuit();
-    } else {
+  try {
+    await register('CommandOrControl+Shift+Q', async () => {
+      if (onQuit) {
+        await onQuit();
+      } else {
+        await unregisterAll();
+        await exit(0);
+      }
+    });
+  } catch (error) {
+    try {
       await unregisterAll();
-      await exit(0);
+    } catch (cleanupError) {
+      console.warn('快捷键注册回滚失败:', cleanupError);
     }
-  });
+    throw error;
+  }
 }
