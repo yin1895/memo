@@ -1,9 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod shutdown_state;
+
 use active_win_pos_rs::get_active_window;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
+use shutdown_state::ShutdownState;
 use sysinfo::System;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -94,6 +96,7 @@ fn main() {
         .manage(SystemMonitor {
             system: Mutex::new(sys),
         })
+        .manage(Arc::new(ShutdownState::default()))
         .invoke_handler(tauri::generate_handler![get_system_stats, get_active_window_info])
         .setup(|app| {
             // ─── 系统托盘 ───
@@ -138,32 +141,38 @@ fn main() {
                         }
                     }
                     "quit" => {
+                        let shutdown_state = app.state::<Arc<ShutdownState>>().inner().clone();
+                        // 防止重复点击 quit 触发多组监听器/线程
+                        if !shutdown_state.try_begin_shutdown() {
+                            return;
+                        }
+
                         // 通知前端执行统一清理后退出
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.emit("app:request-quit", ());
                         }
                         // 安全超时兜底：若前端未响应则 8 秒后强制退出
                         // 前端清理完成后会 emit "app:shutdown-complete"，收到后提前安全退出
-                        let shutdown_acked = Arc::new(AtomicBool::new(false));
-                        let acked_clone = Arc::clone(&shutdown_acked);
-                        let handle_for_listen = app.clone();
-                        // 监听前端 ack 事件
-                        handle_for_listen.listen("app:shutdown-complete", move |_| {
-                            acked_clone.store(true, Ordering::SeqCst);
+                        let shutdown_state_for_ack = Arc::clone(&shutdown_state);
+                        let handle_for_once = app.clone();
+                        let handle_for_ack_exit = app.clone();
+                        // once 监听：收到 ACK 后自动移除监听器，避免累积
+                        handle_for_once.once("app:shutdown-complete", move |_| {
+                            shutdown_state_for_ack.mark_acked();
+                            handle_for_ack_exit.exit(0);
                         });
-                        let handle = app.clone();
+                        let handle_for_timeout = app.clone();
                         std::thread::spawn(move || {
                             // 每 200ms 检查一次，共等待 8 秒（40 次）
                             for _ in 0..40 {
-                                if shutdown_acked.load(Ordering::SeqCst) {
-                                    // 前端已完成清理，安全退出
-                                    handle.exit(0);
+                                if shutdown_state.is_acked() {
+                                    // 前端已完成清理（once 回调会负责退出）
                                     return;
                                 }
                                 std::thread::sleep(Duration::from_millis(200));
                             }
                             // 超时，强制退出
-                            handle.exit(0);
+                            handle_for_timeout.exit(0);
                         });
                     }
                     _ => {}
